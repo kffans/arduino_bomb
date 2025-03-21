@@ -16,7 +16,7 @@ void loop() {
         Serial.println(F("HIGH"));
     }
 
-
+//tu bedzie mój zaje*isty program
     Serial.print(F("Wejscie cyfrowe 6:"));
     if(value6==LOW){
         Serial.println(F("LOW"));
