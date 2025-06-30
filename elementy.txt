@@ -1,0 +1,4 @@
+Kabelki:
+- czerwony, zielony, niebieski, pomarańczowy, fioletowy
+
+
