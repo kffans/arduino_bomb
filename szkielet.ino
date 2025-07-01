@@ -41,6 +41,9 @@ enum class Status {NEUTRAL, SUCCESS, FAILURE};
 // GLOBAL VARS
 // @TODO zmienne globalne tutaj
 Status gameStatus = Status::NEUTRAL;
+
+#define ID_CHAR_COUNT 5
+#define ID_MORSE_CODE_CHAR_COUNT 2
 string ID = "";
 string morseCodeLetters = "";
 
@@ -66,12 +69,47 @@ const unsigned int TIME_DELAY_DURATION_MS = 1;
 
 
 // GENERATE
-string generateID(){
-    // @TODO using random() or randomSeed(); examples of ID: A23C1, H5833, J11GU. Two last characters are from morse code, 1st char is always a letter, 2nd and 3rd are always digits
+string generateID(){ // examples of ID: A23C1, H5833, J11GU. Two last characters are from morse code, 1st char is always a letter, 2nd and 3rd are always digits
+    string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    string digits = "0123456789";
+    unsigned int lettersCount = letters.length();
+    unsigned int digitsCount = digits.length();
+    ID += letters[random(lettersCount)];
+    ID += digits[random(digitsCount)];
+    ID += digits[random(digitsCount)];
+    for (int i = 0; i < ID_MORSE_CODE_CHAR_COUNT; i++) {
+        int putDigit = random(2); // losuje 0 albo 1
+        if (putDigit) { ID += digits[random(digitsCount)];   }
+        else          { ID += letters[random(lettersCount)]; }
+    }
 }
-void generateMorseCode() {
-    // @TODO converts last two characters from ID to dots and dashes ("0" is dot, "1" is dash, "2" is space/end)
-    // morseCode = "01210002" // -> "._ _... "
+void generateMorseCode() { // converts last two characters from ID to dots and dashes ("0" is dot, "1" is dash, "2" is space/end); example: "AB" -> "._ _... " -> "01210002"
+    if (ID.length() != ID_CHAR_COUNT ) { return; }
+
+    for (int i = 0; i < ID_MORSE_CODE_CHAR_COUNT; i++) {
+        switch (ID[ID_CHAR_COUNT - ID_MORSE_CODE_CHAR_COUNT + i]) {
+            case '0': morseCodeLetters += "11111"; break; case '1': morseCodeLetters += "01111"; break;
+            case '2': morseCodeLetters += "00111"; break; case '3': morseCodeLetters += "00011"; break;
+            case '4': morseCodeLetters += "00001"; break; case '5': morseCodeLetters += "00000"; break;
+            case '6': morseCodeLetters += "10000"; break; case '7': morseCodeLetters += "11000"; break;
+            case '8': morseCodeLetters += "11100"; break; case '9': morseCodeLetters += "11110"; break;
+            case 'A': morseCodeLetters += "01";    break; case 'B': morseCodeLetters += "1000";  break;
+            case 'C': morseCodeLetters += "1010";  break; case 'D': morseCodeLetters += "100";   break;
+            case 'E': morseCodeLetters += "0";     break; case 'F': morseCodeLetters += "0010";  break;
+            case 'G': morseCodeLetters += "110";   break; case 'H': morseCodeLetters += "0000";  break;
+            case 'I': morseCodeLetters += "00";    break; case 'J': morseCodeLetters += "0111";  break;
+            case 'K': morseCodeLetters += "101";   break; case 'L': morseCodeLetters += "0100";  break;
+            case 'M': morseCodeLetters += "11";    break; case 'N': morseCodeLetters += "10";    break;
+            case 'O': morseCodeLetters += "111";   break; case 'P': morseCodeLetters += "0110";  break;
+            case 'Q': morseCodeLetters += "1101";  break; case 'R': morseCodeLetters += "010";   break;
+            case 'S': morseCodeLetters += "000";   break; case 'T': morseCodeLetters += "1";     break;
+            case 'U': morseCodeLetters += "001";   break; case 'V': morseCodeLetters += "0001";  break;
+            case 'W': morseCodeLetters += "011";   break; case 'X': morseCodeLetters += "1001";  break;
+            case 'Y': morseCodeLetters += "1011";  break; case 'Z': morseCodeLetters += "1100";  break;
+            default: break;
+        }
+        morseCodeLetters += "2";
+    }
 }
 void generateWiresMask(){
     /* @TODO maska i jej wartości są obliczane na podstawie ID */
@@ -114,6 +152,8 @@ Status checkLaser() {
 }
 
 void initBomb(){
+    randomSeed(analogRead(A0)); // @NOTE pierwszy pin analogu jest zajęty tutaj, by generować liczby losowe
+
     // @TODO jeżeli dodano wcześniej zmienne globalne, należy je resetować tutaj
     gameStatus = Status::NEUTRAL;
     ID = "";
