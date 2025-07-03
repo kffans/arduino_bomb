@@ -55,6 +55,7 @@ byte wiresCutCount = 0;
 
 #define MELODY_TONES_COUNT 4
 int melodyTones[MELODY_TONES_COUNT];
+char melodyKeys[MELODY_TONES_COUNT];
 
 Servo laserServo;
 int laserRotation = 0;
@@ -72,15 +73,15 @@ const unsigned int TIME_DELAY_DURATION_MS = 1;
 string generateID(){ // examples of ID: A23C1, H5833, J11GU. Two last characters are from morse code, 1st char is always a letter, 2nd and 3rd are always digits
     string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     string digits = "0123456789";
-    unsigned int lettersCount = letters.length();
-    unsigned int digitsCount = digits.length();
-    ID += letters[random(lettersCount)];
-    ID += digits[random(digitsCount)];
-    ID += digits[random(digitsCount)];
+    unsigned int lettersLength = letters.length();
+    unsigned int digitsLength = digits.length();
+    ID += letters[random(lettersLength)];
+    ID += digits[random(digitsLength)];
+    ID += digits[random(digitsLength)];
     for (int i = 0; i < ID_MORSE_CODE_CHAR_COUNT; i++) {
         int putDigit = random(2); // losuje 0 albo 1
-        if (putDigit) { ID += digits[random(digitsCount)];   }
-        else          { ID += letters[random(lettersCount)]; }
+        if (putDigit) { ID += digits[random(digitsLength)];   }
+        else          { ID += letters[random(lettersLength)]; }
     }
 }
 void generateMorseCode() { // converts last two characters from ID to dots and dashes ("0" is dot, "1" is dash, "2" is space/end); example: "AB" -> "._ _... " -> "01210002"
@@ -112,15 +113,74 @@ void generateMorseCode() { // converts last two characters from ID to dots and d
     }
 }
 void generateWiresMask(){
-    /* @TODO maska i jej wartości są obliczane na podstawie ID */
-    // wiresMask[0] = true; // oznacza że pierwszy kabel ma być przecięty
-    // wiresCutCount = 1; // policz ile jest wartości true w masce
+    for (int i = 0; i < WIRES_COUNT; i++) {
+        wiresMask[i] == false;
+    }
+
+    unsigned int digitCount = 0;
+    unsigned int letterCount = 0;
+    unsigned int digitSum = 0;
+    unsigned int evenDigitCount = 0;
+    unsigned int vowelCount = 0;      // liczba samogłosek
+    for (int i = 0; i < ID_CHAR_COUNT; i++) {
+        if (isDigit(ID[i])) {
+            int digit = ID[i] - 48;
+            digitSum += digit;
+            digitCount++;
+            if (digit % 2 == 0) {
+                evenDigitCount++;
+            }
+        }
+        else {
+            letterCount++;
+            if (ID[i] == 'A' || ID[i] == 'I' || ID[i] == 'E' || ID[i] == 'O' || ID[i] == 'U' || ID[i] == 'Y') {
+                vowelCount++;
+            }
+        }
+    }
+
+    // numery kabli należy liczyć od góry w dół:
+        // jeżeli dwa ostatnie znaki w ID są obie cyframi lub obie literami, POD ŻADNYM POZOREM nie przecinaj ostatniego kabla
+        // jeżeli w ID jest przynajmniej jedna samogłoska, przetnij ostatni kabel
+        // jeżeli cyfry w ID dodają się do liczby większej lub równej 15, przetnij drugi kabel
+        // jeżeli są same cyfry parzyste (zero też się liczy), przetnij kable o nieparzystych numerach
+        // jeżeli w ID występuje przynajmniej jedna para liter, które są obok siebie w alfabecie, przetnij czwarty kabel
+        // jeżeli do tej pory nie przetnąłeś żadnego kabla, przetnij wszystkie kable oprócz trzeciego
+     
+    if (vowelCount > 0) { wiresMask[4] = true; }
+    if (digitSum >= 15) { wiresMask[1] = true; }
+    if (digitCount == evenDigitCount) { wiresMask[0] = true; wiresMask[2] = true; wiresMask[4] = true; }
+    if ( (!isDigit(ID[3]) && abs(ID[0] - ID[3]) == 1) || (!isDigit(ID[4]) && abs(ID[0] - ID[4]) == 1) || (!isDigit(ID[3]) && !isDigit(ID[4]) && abs(ID[3] - ID[4]) == 1) ) { wiresMask[3] = true; }
+
+    if ( (isDigit(ID[3]) && isDigit(ID[4])) || (!isDigit(ID[3]) && !idDigit(ID[4])) ) { wiresMask[4] = false; }
+
+    bool canCutSomething = false;
+    for (int i = 0; i < WIRES_COUNT; i++) {
+        if (wiresMask[i] == true) {
+            canCutSomething = true;
+            break;
+        }
+    }
+    if (!canCutSomething) { wiresMask[0] = true; wiresMask[1] = true; wiresMask[3] = true; wiresMask[4] = true; }
+
+
+    if ( (isDigit(ID[3]) && isDigit(ID[4])) || (!isDigit(ID[3]) && !idDigit(ID[4])) ) { wiresMask[4] = false; }
+
+
+    for (int i = 0; i < WIRES_COUNT; i++) {
+        if (wiresMask[i] == true) {
+            wiresCutCount++;
+        }
+    }
 }
 void generateMelodyTones(){
-    /* @TODO nuty są generowane losowo, znowu random() lub randomSeed() */
-    // for (int i = 0; i < MELODY_TONES_COUNT; i++ ){
-    //     melodyTones[i] = NOTE_G3; /* @TODO generowanie random */
-    // }
+    int tones[10] = [NOTE_G1, NOTE_G3, NOTE_G5, NOTE_E4, NOTE_A4, NOTE_C4, NOTE_A4, NOTE_E1, NOTE_E2, NOTE_E3];
+    int tonesLength = 10;
+    for (int i = 0; i < MELODY_TONES_COUNT; i++){
+        int index = random(tonesLength);
+        melodyKeys[i] = index + 48;
+        melodyTones[i] = tones[index];
+    }
 }
 
 
