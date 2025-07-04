@@ -10,29 +10,29 @@ char keys[ROWS][COLS] = {
   { '4', '5', '6', 'B' },
   { '7', '8', '9', 'C' },
   { '*', '0', '#', 'D' }
-};
+}; 
 
-uint8_t colPins[COLS] = { 5, 4, 3, 2 }; // Pins connected to C1, C2, C3, C4
-uint8_t rowPins[ROWS] = { 9, 8, 7, 6 }; // Pins connected to R1, R2, R3, R4
+uint8_t colPins[COLS] = { 5, 4, 3, 2 }; // Piny kolumn
+uint8_t rowPins[ROWS] = { 9, 8, 7, 6 }; // Piny wierszy
 
-Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
-char key;
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS); //inicjalizacja klawiatury
+char key; 
 
-const int gameTones[] = { NOTE_G3, NOTE_C4, NOTE_E4, NOTE_G5};
-const int Keys[]={'1','5','3','2'};
-const int KeyboardTones[5][3]= {
+const int gameTones[] = { NOTE_G3, NOTE_C4, NOTE_E4, NOTE_G5}; //4 tony które trzeba wcisnąć na klawiaturze
+const int Keys[]={'1','5','3','2'}; //numery klawiszy ktore trzeba wcisnac
+const int KeyboardTones[5][3]= { //pelna klawiatura dzwiekow
                           {NOTE_G3, NOTE_G5, NOTE_E4},
                           {NOTE_A4, NOTE_C4, NOTE_A4},
                           {NOTE_E1, NOTE_E2, NOTE_E3},
                           {NOTE_D1, NOTE_G1, NOTE_G3},
                           {0,NOTE_G1,0}
-                          };
+                          }; 
 int tonesLength=4;
-int g=0;
+int tone_number=0;
 int czy_przerwa_key=0;
 
 int czy_przerwa_melody=0;
-int k=0;
+int key_number=0;
 int czy_poprawny_key=0;
 
 int koniec_dzwieku=0;
@@ -56,7 +56,7 @@ unsigned long rememberedTime = millis();
 unsigned long difference = 0;
 unsigned long explosionTime = 500000;
 
-int a=0;
+int letter_number=0;
 int tryb=0;
 String letters = "01210002";//._ _... AB
 const int lettersLength = letters.length(); 
@@ -71,7 +71,7 @@ void playKeys()
   if(difference>=WAITING_TIME)//po 5 sekundach braku aktywnosci wracam do morse'a
   {
     currentMode=morse;
-    k=0;
+    key_number=0;
   }
   key=keypad.getKey();
   if(key != NO_KEY)//po wcisnieciu klawisza
@@ -91,29 +91,30 @@ void playKeys()
       case '0': tone(BUZZER, KeyboardTones[3][1]);Serial.println("klik 0");break;
       default : break;
     }
+    delay(200);
     czy_przerwa_key=1;
-    if(key!=Keys[k])//sprawdzenie poprawnosci
+    if(key!=Keys[key_number])//sprawdzenie poprawnosci
     {
       Serial.println("klawisz sie nie zgadza");
       Serial.println(key);
-      Serial.println((char)Keys[k]);
+      Serial.println((char)Keys[key_number]);
       czy_poprawny_key=1;
       
     }
-    k++;
+    key_number++;
     Serial.print("k=");
-    Serial.println(k);
-    if(k==4 && czy_poprawny_key==0)//gdy 4 klawisze wcisniecie sprawdzenie czy nie bylo pomylki
+    Serial.println(key_number);
+    if(key_number==4 && czy_poprawny_key==0)//gdy 4 klawisze wcisniecie sprawdzenie czy nie bylo pomylki
     {
       //cos sie dzieje gdy wygrana
       Serial.println("wygrana!");
       currentMode=morse;
-      k=0;
+      key_number=0;
     }
-    else if(k==4 && czy_poprawny_key==1)//gdy zdarzyla sie pomylka mozna wpisac kod ponownie
+    else if(key_number==4 && czy_poprawny_key==1)//gdy zdarzyla sie pomylka mozna wpisac kod ponownie
     {
       Serial.println("zle!");
-      k=0;
+      key_number=0;
     }
   }
   difference=currentTime-rememberedTime;
@@ -125,14 +126,12 @@ void playKeys()
 
 }
 
-
-
 void playMelody()
 {
   difference=currentTime-rememberedTime;
-  if(czy_przerwa_melody==0)
-  tone(BUZZER,gameTones[g]);
-  if(difference>=KEY_TIME && czy_przerwa_melody==0)
+  if(czy_przerwa_melody==0) //kiedy 0 gra dzwiek
+  tone(BUZZER,gameTones[tone_number]);
+  if(difference>=KEY_TIME && czy_przerwa_melody==0) //gdy minie czas dzwieku wylacz buzzer
   {
     noTone(BUZZER);
     rememberedTime=currentTime;
@@ -140,17 +139,17 @@ void playMelody()
     Serial.println("gram");
   }
   else
-  if(czy_przerwa_melody==1 && difference>=KEY_BREAK)
+  if(czy_przerwa_melody==1 && difference>=KEY_BREAK) //gdy minie czas przerwy zagraj nastepny dzwiek
   {Serial.println("przerwa");
-    if(g<tonesLength)
-    g++;
+    if(tone_number<tonesLength)
+    tone_number++;
     czy_przerwa_melody=0;
     rememberedTime=currentTime;
   }
-  if(g==tonesLength)
+  if(tone_number==tonesLength)
   {
     currentMode=keyboard;
-    g=0;
+    tone_number=0;
   }
 
 }
@@ -165,42 +164,42 @@ void playMorse ()
       difference = currentTime-rememberedTime;
     }
 
-  if(letters[a]=='0' && czy_przerwa==0)
+  if(letters[letter_number]=='0' && czy_przerwa==0)
   {
     tone(BUZZER, 1000);
     if(difference >= DOT_TIME)
     {
       rememberedTime=currentTime;
       noTone(BUZZER);
-      if(a<lettersLength-1)
-      a++;
-      else a=0;
+      if(letter_number<lettersLength-1)
+      letter_number++;
+      else letter_number=0;
       czy_przerwa=1;
     }
   }
-  if(letters[a]=='1' && czy_przerwa==0)
+  if(letters[letter_number]=='1' && czy_przerwa==0)
   {
     tone(BUZZER, 1000);
     if(difference >= DASH_TIME )
     {
       rememberedTime=currentTime;
       noTone(BUZZER);
-      if(a<lettersLength-1)
-      a++;
-      else a=0;
+      if(letter_number<lettersLength-1)
+      letter_number++;
+      else letter_number=0;
       czy_przerwa=1;
     }
   }
-  if(letters[a]=='2' && czy_przerwa==0)
+  if(letters[letter_number]=='2' && czy_przerwa==0)
   {
     noTone(BUZZER);
     if(difference >= LONG_BREAK)
     {
       rememberedTime=currentTime;
       noTone(BUZZER);
-      if(a<lettersLength-1)
-      a++;
-      else a=0;
+      if(letter_number<lettersLength-1)
+      letter_number++;
+      else letter_number=0;
       czy_przerwa=1;
     }
   }  
@@ -225,7 +224,7 @@ void loop() {
     Serial.println("weszlo");
     rememberedTime=millis();
     noTone(BUZZER);
-    g=0;
+    tone_number=0;
     czy_przerwa_melody=0;
   }
   else
