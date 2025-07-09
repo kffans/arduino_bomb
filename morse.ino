@@ -3,31 +3,28 @@
 #include <string.h>
 #include "pitches.h"
 
-const uint8_t ROWS = 4;
-const uint8_t COLS = 4;
+const uint8_t ROWS = 3;
+const uint8_t COLS = 3;
 char keys[ROWS][COLS] = {
-  { '1', '2', '3', 'A' },
-  { '4', '5', '6', 'B' },
-  { '7', '8', '9', 'C' },
-  { '*', '0', '#', 'D' }
+  { '1', '2', '3' },
+  { '4', '5', '6' },
+  { '7', '8', '9' }
 }; 
 
-uint8_t colPins[COLS] = { 5, 4, 3, 2 }; // Piny kolumn
-uint8_t rowPins[ROWS] = { 9, 8, 7, 6 }; // Piny wierszy
+uint8_t rowPins[ROWS] = { 14, 15, 16 }; // Piny wierszy
+uint8_t colPins[COLS] = { 17, 18, 19 }; // Piny kolumn
 
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS); //inicjalizacja klawiatury
 char key; 
 
-const int gameTones[] = { NOTE_G3, NOTE_C4, NOTE_E4, NOTE_G5}; //4 tony które trzeba wcisnąć na klawiaturze
-const int Keys[]={'1','5','3','2'}; //numery klawiszy ktore trzeba wcisnac
-const int KeyboardTones[5][3]= { //pelna klawiatura dzwiekow
-                          {NOTE_G3, NOTE_G5, NOTE_E4},
-                          {NOTE_A4, NOTE_C4, NOTE_A4},
-                          {NOTE_E1, NOTE_E2, NOTE_E3},
-                          {NOTE_D1, NOTE_G1, NOTE_G3},
-                          {0,NOTE_G1,0}
+const int gameTones[] = { NOTE_E5, NOTE_CS4, NOTE_F6}; //4 tony które trzeba wcisnąć na klawiaturze
+const int Keys[]={'5','2','6'}; //numery klawiszy ktore trzeba wcisnac
+const int KeyboardTones[3][3]= { //pelna klawiatura dzwiekow
+                          {NOTE_C1,  NOTE_CS4, NOTE_D4 },
+                          {NOTE_DS5, NOTE_E5,  NOTE_F6 },
+                          {NOTE_FS6, NOTE_G7,  NOTE_GS7}
                           }; 
-int tonesLength=4;
+int tonesLength=3;
 int tone_number=0;
 int czy_przerwa_key=0;
 
@@ -37,12 +34,12 @@ int czy_poprawny_key=0;
 
 int koniec_dzwieku=0;
 
-const int BUZZER=13;
-unsigned long DOT_TIME=200;
+const int BUZZER=7;
+unsigned long DOT_TIME=150;
 unsigned long DASH_TIME=500;
-unsigned long BREAK=1000;
-unsigned long LONG_BREAK=1500;
-const int BUTTON = 12;
+unsigned long BREAK=600;
+unsigned long LONG_BREAK=1600;
+const int BUTTON = 8;
 
 unsigned long KEY_TIME=500;
 unsigned long KEY_BREAK=500;
@@ -88,7 +85,6 @@ void playKeys()
       case '7': tone(BUZZER, KeyboardTones[2][0]);Serial.println("klik 7");break;
       case '8': tone(BUZZER, KeyboardTones[2][1]);Serial.println("klik 8");break;
       case '9': tone(BUZZER, KeyboardTones[2][2]);Serial.println("klik 9");break;
-      case '0': tone(BUZZER, KeyboardTones[3][1]);Serial.println("klik 0");break;
       default : break;
     }
     delay(200);
@@ -104,17 +100,19 @@ void playKeys()
     key_number++;
     Serial.print("k=");
     Serial.println(key_number);
-    if(key_number==4 && czy_poprawny_key==0)//gdy 4 klawisze wcisniecie sprawdzenie czy nie bylo pomylki
+    if(key_number==3 && czy_poprawny_key==0)//gdy 4 klawisze wcisniecie sprawdzenie czy nie bylo pomylki
     {
       //cos sie dzieje gdy wygrana
       Serial.println("wygrana!");
+      noTone(BUZZER);
       currentMode=morse;
       key_number=0;
     }
-    else if(key_number==4 && czy_poprawny_key==1)//gdy zdarzyla sie pomylka mozna wpisac kod ponownie
+    else if(key_number==3 && czy_poprawny_key==1)//gdy zdarzyla sie pomylka mozna wpisac kod ponownie
     {
       Serial.println("zle!");
       key_number=0;
+      czy_poprawny_key = 0;
     }
   }
   difference=currentTime-rememberedTime;
