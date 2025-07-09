@@ -24,6 +24,7 @@ const int KeyboardTones[3][3]= { //pelna klawiatura dzwiekow
                           {NOTE_DS5, NOTE_E5,  NOTE_F6 },
                           {NOTE_FS6, NOTE_G7,  NOTE_GS7}
                           }; 
+
 int tonesLength=3;
 int tone_number=0;
 int czy_przerwa_key=0;
