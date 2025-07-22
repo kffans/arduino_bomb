@@ -16,7 +16,7 @@
 #define WIRES_BASE 1 /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
 // 
 #define LED_SUCC_MELODY 1
-#define MELODY_KEYBOARD 1
+#define MELODY_KEYBOARD 14
 #define MELODY_BTN 1
 // 
 #define LED_SUCC_LASER 1
@@ -35,17 +35,26 @@
 
 
 enum class Status {NEUTRAL, SUCCESS, FAILURE};
+enum class Buzzer {SILENT, MORSE, MELODY, KEYBOARD};
 
 
 
 // GLOBAL VARS
 // @TODO zmienne globalne tutaj
 Status gameStatus = Status::NEUTRAL;
+Buzzer buzzerMode = Buzzer::MORSE;
 
 #define ID_CHAR_COUNT 5
 #define ID_MORSE_CODE_CHAR_COUNT 2
+unsigned long MORSE_DOT_TIME   = 150;
+unsigned long MORSE_DASH_TIME  = 500;
+unsigned long MORSE_BREAK      = 600;
+unsigned long MORSE_LONG_BREAK = 1600;
 string ID = "";
 string morseCodeLetters = "";
+int morseCodeLettersLength = 0;
+int morseCodeLetterIndex = 0;
+bool isMorsePaused = false;
 
 // @TODO zmienne dla 7-SEG
 
@@ -53,19 +62,37 @@ string morseCodeLetters = "";
 bool wiresMask[WIRES_COUNT]; // tam gdzie jest "true", ma być przecięty kabel
 byte wiresCutCount = 0;
 
-#define MELODY_TONES_COUNT 4
+#define MELODY_TONES_COUNT 3
+#define MELODY_KEYPAD_ROWS 3
+#define MELODY_KEYPAD_COLS 3
+unsigned long MELODY_KEY_TIME = 500;
+unsigned long MELODY_KEY_BREAK = 500;
+unsigned long MELODY_WAITING_TIME = 5000;
+uint8_t rowPins[MELODY_KEYPAD_ROWS] = { MELODY_KEYBOARD,     MELODY_KEYBOARD + 1, MELODY_KEYBOARD + 2 }; // Piny wierszy
+uint8_t colPins[MELODY_KEYPAD_COLS] = { MELODY_KEYBOARD + 3, MELODY_KEYBOARD + 4, MELODY_KEYBOARD + 5 }; // Piny kolumn
+char keymap[MELODY_KEYPAD_ROWS][MELODY_KEYPAD_COLS] = { { '1', '2', '3' }, { '4', '5', '6' }, { '7', '8', '9' } }; 
+Keypad keypad = Keypad(makeKeymap(keymap), rowPins, colPins, MELODY_KEYPAD_ROWS, MELODY_KEYPAD_COLS); //inicjalizacja klawiatury
+const int keyboardTones[MELODY_KEYPAD_ROWS * MELODY_KEYPAD_COLS] = [NOTE_C1, NOTE_CS4, NOTE_D4, NOTE_DS5, NOTE_E5, NOTE_F6, NOTE_FS6, NOTE_G7, NOTE_GS7]; 
 int melodyTones[MELODY_TONES_COUNT];
 char melodyKeys[MELODY_TONES_COUNT];
+bool isMelodyPaused = false;
+bool isMelodySuccessful = false;
+bool isKeyPaused = false;
+bool isKeyCorrect = true;
+int toneIndex = 0;
+int keyIndex = 0;
 
+unsigned int LASER_TARGET_ACCURACY = 50;
 Servo laserServo;
 int laserRotation = 0;
-unsigned int LASER_TARGET_ACCURACY = 50;
 
 // @TODO zmienne dla OLED
 
-unsigned int TIME_MS = 0;
 const unsigned int TIME_TOTAL_MS = 120000; // 2 minuty = 120000ms
 const unsigned int TIME_DELAY_DURATION_MS = 1;
+unsigned int TIME_MS = 0;
+unsigned long currentTime = 0;
+unsigned long rememberedTime = millis();
 
 
 
@@ -111,6 +138,8 @@ void generateMorseCode() { // converts last two characters from ID to dots and d
         }
         morseCodeLetters += "2";
     }
+    
+    morseCodeLettersLength = morseCodeLetters.length();
 }
 void generateWiresMask(){
     for (int i = 0; i < WIRES_COUNT; i++) {
@@ -174,15 +203,98 @@ void generateWiresMask(){
     }
 }
 void generateMelodyTones(){
-    int tones[10] = [NOTE_G1, NOTE_G3, NOTE_G5, NOTE_E4, NOTE_A4, NOTE_C4, NOTE_A4, NOTE_E1, NOTE_E2, NOTE_E3];
-    int tonesLength = 10;
+    int keyboardTonesLength = MELODY_KEYPAD_ROWS * MELODY_KEYPAD_COLS;
     for (int i = 0; i < MELODY_TONES_COUNT; i++){
-        int index = random(tonesLength);
+        int index = random(keyboardTonesLength);
         melodyKeys[i] = index + 48;
-        melodyTones[i] = tones[index];
+        melodyTones[i] = keyboardTones[index];
     }
 }
 
+
+// PLAY
+void playMorse() {
+    unsigned long difference = currentTime - rememberedTime;
+    if (isMorsePaused && difference >= MORSE_BREAK){
+        rememberedTime = currentTime;
+        isMorsePaused = false;
+        difference = currentTime - rememberedTime;
+    }
+    if (!isMorsePaused) {
+        int waitingTime = 100;
+        switch (morseCodeLetters[morseCodeLetterIndex]) {
+            case '0': tone(BUZZER, 1000); waitingTime = MORSE_DOT_TIME;   break;
+            case '1': tone(BUZZER, 1000); waitingTime = MORSE_DASH_TIME;  break;
+            case '2': noTone(BUZZER);     waitingTime = MORSE_LONG_BREAK; break;
+            default: break;
+        }
+        if (difference >= waitingTime) {
+            rememberedTime = currentTime;
+            noTone(BUZZER);
+            if (morseCodeLetterIndex < morseCodeLettersLength - 1) { morseCodeLetterIndex++; }
+            else                                                   { morseCodeLetterIndex = 0; }
+            isMorsePaused = true;
+        }
+    }
+}
+void playMelody() {
+    unsigned long difference = currentTime - rememberedTime;
+    if (!isMelodyPaused) { //kiedy 0 gra dzwiek
+        tone(BUZZER, melodyTones[toneIndex]);
+    }
+    if (difference >= MELODY_KEY_TIME && !isMelodyPaused) { //gdy minie czas dzwieku wylacz buzzer
+        noTone(BUZZER);
+        rememberedTime = currentTime;
+        isMelodyPaused = true;
+    }
+    else if (difference >= MELODY_KEY_BREAK && isMelodyPaused) { //gdy minie czas przerwy zagraj nastepny dzwiek
+        if (toneIndex < MELODY_TONES_COUNT) {
+            toneIndex++;
+        }
+        isMelodyPaused = false;
+        rememberedTime = currentTime;
+    }
+    if(toneIndex == MELODY_TONES_COUNT){
+        buzzerMode = Buzzer::KEYBOARD;
+        toneIndex = 0;
+    }
+}
+void playKeys() {
+    unsigned long difference = currentTime - rememberedTime;
+    if (difference >= MELODY_WAITING_TIME) { //po 5 sekundach braku aktywnosci wracam do morse'a
+        buzzerMode = Buzzer::MORSE;
+        keyIndex = 0;
+    }
+    char currentKey = keypad.getKey();
+    if (currentKey != NO_KEY) { //po wcisnieciu klawisza
+        rememberedTime = millis();
+        if (currentKey >= 49 && currentKey <= 57) {
+            tone(BUZZER, keyboardTones[currentKey - 49]); //gram dzwiek przypisany do klawisza
+        }
+        delay(200);
+        isKeyPaused = true;
+        if (currentKey != melodyKeys[keyIndex]) {//sprawdzenie poprawnosci
+            isKeyCorrect = false;
+        }
+        keyIndex++;
+        if (keyIndex == MELODY_TONES_COUNT) {
+            if (isKeyCorrect) { //gdy 3 klawisze wcisniecie sprawdzenie czy nie bylo pomylki
+                noTone(BUZZER);
+                buzzerMode = Buzzer::MORSE;
+                isMelodySuccessful = true;
+            }
+            else { //gdy zdarzyla sie pomylka mozna wpisac kod ponownie
+                isKeyCorrect = true;
+            }
+            keyIndex = 0;
+        }
+    }
+    difference = currentTime - rememberedTime;
+    if (isKeyPaused && difference >= MELODY_KEY_TIME) { //gdy minie 200ms koncze grac dzwiek
+        noTone(BUZZER);
+        isKeyPaused = false;
+    }
+}
 
 
 // CHECK
@@ -200,7 +312,9 @@ Status checkWires(){
     return Status::NEUTRAL;
 }
 Status checkMelody() {
-    // @TODO sprawdza czy melodia została rozwiązana przez rozbrajacza
+    if (isMelodySuccessful) {
+        return Status::SUCCESS;
+    }
     return Status::NEUTRAL;
 }
 Status checkLaser() {
@@ -215,22 +329,32 @@ void initBomb(){
     randomSeed(analogRead(A0)); // @NOTE pierwszy pin analogu jest zajęty tutaj, by generować liczby losowe
 
     // @TODO jeżeli dodano wcześniej zmienne globalne, należy je resetować tutaj
+
     gameStatus = Status::NEUTRAL;
+    buzzerMode = Buzzer::MORSE;
+
     ID = "";
     morseCodeLetters = "";
-
-    // @TODO zmienne dla 7-SEG
+    morseCodeLettersLength = 0;
+    morseCodeLetterIndex = 0;
+    isMorsePaused = false;
 
     wiresCutCount = 0;
 
-    laserServo;
+    isMelodyPaused = false;
+    isMelodySuccessful = false;
+    isKeyPaused = false;
+    isKeyCorrect = true;
+    toneIndex = 0;
+    keyIndex = 0;
+
     laserRotation = 0;
 
-    // @TODO zmienne dla OLED
-
     TIME_MS = 0;
+    currentTime = 0;
+    rememberedTime = millis(); // @TODO isn't it too much after resetting?
 
-    
+
 
     // @TODO wypisać wszystkie pinMode i output/input
     // pinMode(TIMER, ); // @TODO uruchomić timer
@@ -243,7 +367,7 @@ void initBomb(){
     }
 
     pinMode(LED_SUCC_MELODY, OUTPUT);
-    // pinMode(MELODY_KEYBOARD, ); // @TODO zainicjować tutaj klawiaturę
+    pinMode(MELODY_BTN, INPUT_PULLUP);
 
     pinMode(LED_SUCC_LASER, OUTPUT);
     pinMode(LASER_STEER_LEFT, INPUT);
@@ -280,10 +404,27 @@ void setup(){
 
 void loop() {
     // if (digitalRead(BOMB_RESET) == HIGH) { initBomb(); } // @TODO inaczej to zrobić, niech się wykonuje tylko po puszczeniu przycisku
+    currentTime = millis();
 
     switch (gameStatus) {
         case Status::NEUTRAL: { // gra toczy się
-            // @TODO melody + buzzer + kod morsa
+            
+            if (digitalRead(MELODY_BTN) == LOW) {
+                rememberedTime = millis();
+                buzzerMode = Buzzer::MELODY;
+                noTone(BUZZER);
+                toneIndex = 0;
+                isMelodyPaused = false;
+            }
+            else {
+                switch (buzzerMode) {
+                    case Buzzer::MORSE:    playMorse();  break;
+                    case Buzzer::MELODY:   playMelody(); break;
+                    case Buzzer::KEYBOARD: playKeys();   break;
+                    default: break;
+                }
+            }
+
             // @TODO interval, dioda + przycisk; załącza się wtedy gdy rozwiązemy przynajmniej jeden moduł?
 
             if (TIME_DELAY_MS % 100 == 0) { // wykonuje tu co każde 100ms
@@ -305,14 +446,10 @@ void loop() {
                 }
                
 
-                // @TODO sprawdzanie melodii
                 Status melodyStatus = checkMelody();
                 switch (melodyStatus) {
                     case Status::SUCCESS:
-                        digitalWrite(LED_SUCC_WIRES, HIGH);
-                        break;
-                    case Status::FAILURE:
-                        // @TODO zapala się led od fail? szybciej czas idzie? 
+                        digitalWrite(LED_SUCC_MELODY, HIGH);
                         break;
                     default: break;
                 }
@@ -324,11 +461,20 @@ void loop() {
                 if (laserRotation < 0) { laserRotation = 0; } 
                 laserServo.write(laserRotation);
                 Status laserStatus = checkLaser();
+                switch (laserStatus) {
+                    case Status::SUCCESS:
+                        digitalWrite(LED_SUCC_LASER, HIGH);
+                        break;
+                    default:
+                        digitalWrite(LED_SUCC_LASER, LOW);
+                        break;
+                }
 
                 if (wiresStatus  == Status::SUCCESS && 
                     melodyStatus == Status::SUCCESS &&
                     laserStatus  == Status::SUCCESS) {
                     gameStatus = Status::SUCCESS; // wygrano grę
+                    break;
                 }
             }
             delay(TIME_DELAY_DURATION_MS);
@@ -351,6 +497,11 @@ void loop() {
         default: break;
     }
 }
+
+
+
+
+
 
 
 
