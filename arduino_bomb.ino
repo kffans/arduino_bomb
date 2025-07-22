@@ -7,30 +7,30 @@
 
 // @TODO define wszystkie piny
 // 
-#define BOMB_RESET 1
-#define TIMER 1     /* timer 7-seg */
-#define LED_FAIL 1  /* led przy timerze gdy popełniony błąd */
-#define BUZZER 1    /* do morsa, przy wybuchu */
+#define BOMB_RESET        1
+#define TIMER             1  /* timer 7-seg */
+#define LED_FAIL          1  /* led przy timerze gdy popełniony błąd */
+#define BUZZER            1  /* do morsa, przy wybuchu */
 // 
-#define LED_SUCC_WIRES 1
-#define WIRES_BASE 1 /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
+#define INTERVAL_LED      1  /* żółty led który z czasem miga coraz szybciej */
+#define INTERVAL_BTN      1  /* przycisk do naciskania co każde 5s */
 // 
-#define LED_SUCC_MELODY 1
-#define MELODY_KEYBOARD 14
-#define MELODY_BTN 1
+#define LED_SUCC_WIRES    1
+#define WIRES_BASE        1  /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
 // 
-#define LED_SUCC_LASER 1
-#define LASER_STEER_LEFT 2   /* sterowanie serwo w lewo */
+#define LED_SUCC_MELODY   1
+#define MELODY_KEYBOARD   14
+#define MELODY_BTN        1
+// 
+#define LED_SUCC_LASER    1
+#define LASER_STEER_LEFT  2  /* sterowanie serwo w lewo */
 #define LASER_STEER_RIGHT 3  /* sterowanie serwo w prawo */
-#define LASER_SERVO 4
-#define LASER 6
-#define LASER_LDR 1    /* fotorezystor do wykrywania lasera*/
+#define LASER_SERVO       4
+#define LASER             6
+#define LASER_LDR         1  /* fotorezystor do wykrywania lasera*/
 // 
-#define INTERVAL_BTN 1  /* przycisk do naciskania co każde 10s */
-#define INTERVAL_LED 1  /* żółty led który z czasem miga coraz szybciej */
-// 
-#define OLED 1
-#define OLED_JOYSTICK 1
+#define OLED              1
+#define OLED_JOYSTICK     1
 
 
 
@@ -44,32 +44,39 @@ enum class Buzzer {SILENT, MORSE, MELODY, KEYBOARD};
 Status gameStatus = Status::NEUTRAL;
 Buzzer buzzerMode = Buzzer::MORSE;
 
-#define ID_CHAR_COUNT 5
-#define ID_MORSE_CODE_CHAR_COUNT 2
-unsigned long MORSE_DOT_TIME   = 150;
-unsigned long MORSE_DASH_TIME  = 500;
-unsigned long MORSE_BREAK      = 600;
-unsigned long MORSE_LONG_BREAK = 1600;
+const byte ID_CHAR_COUNT            = 5;
+const byte ID_MORSE_CODE_CHAR_COUNT = 2;
+const unsigned int MORSE_DOT_TIME   = 150;
+const unsigned int MORSE_DASH_TIME  = 500;
+const unsigned int MORSE_BREAK      = 600;
+const unsigned int MORSE_LONG_BREAK = 1600;
 string ID = "";
-string morseCodeLetters = "";
-int morseCodeLettersLength = 0;
-int morseCodeLetterIndex = 0;
+string morseCodeLetters     = "";
+byte morseCodeLettersLength = 0;
+byte morseCodeLetterIndex   = 0;
 bool isMorsePaused = false;
+
+const unsigned int INTERVAL_TOTAL_ACTIVATION_TIME = 5000;
+const unsigned int INTERVAL_TOTAL_EXPLOSION_TIME  = 5000;
+unsigned int intervalActivationTime = 0;
+unsigned int intervalExplosionTime  = 0;
+bool hasIntervalActivated = false;
+bool intervalLEDState = false;
 
 // @TODO zmienne dla 7-SEG
 
-#define WIRES_COUNT 5
+const byte WIRES_COUNT = 5;
 bool wiresMask[WIRES_COUNT]; // tam gdzie jest "true", ma być przecięty kabel
 byte wiresCutCount = 0;
 
-#define MELODY_TONES_COUNT 3
-#define MELODY_KEYPAD_ROWS 3
-#define MELODY_KEYPAD_COLS 3
-unsigned long MELODY_KEY_TIME = 500;
-unsigned long MELODY_KEY_BREAK = 500;
-unsigned long MELODY_WAITING_TIME = 5000;
-uint8_t rowPins[MELODY_KEYPAD_ROWS] = { MELODY_KEYBOARD,     MELODY_KEYBOARD + 1, MELODY_KEYBOARD + 2 }; // Piny wierszy
-uint8_t colPins[MELODY_KEYPAD_COLS] = { MELODY_KEYBOARD + 3, MELODY_KEYBOARD + 4, MELODY_KEYBOARD + 5 }; // Piny kolumn
+const byte MELODY_TONES_COUNT = 3;
+const byte MELODY_KEYPAD_ROWS = 3;
+const byte MELODY_KEYPAD_COLS = 3;
+const unsigned int MELODY_KEY_TIME     = 500;
+const unsigned int MELODY_KEY_BREAK    = 500;
+const unsigned int MELODY_WAITING_TIME = 5000;
+byte rowPins[MELODY_KEYPAD_ROWS] = { MELODY_KEYBOARD,     MELODY_KEYBOARD + 1, MELODY_KEYBOARD + 2 }; // Piny wierszy
+byte colPins[MELODY_KEYPAD_COLS] = { MELODY_KEYBOARD + 3, MELODY_KEYBOARD + 4, MELODY_KEYBOARD + 5 }; // Piny kolumn
 char keymap[MELODY_KEYPAD_ROWS][MELODY_KEYPAD_COLS] = { { '1', '2', '3' }, { '4', '5', '6' }, { '7', '8', '9' } }; 
 Keypad keypad = Keypad(makeKeymap(keymap), rowPins, colPins, MELODY_KEYPAD_ROWS, MELODY_KEYPAD_COLS); //inicjalizacja klawiatury
 const int keyboardTones[MELODY_KEYPAD_ROWS * MELODY_KEYPAD_COLS] = [NOTE_C1, NOTE_CS4, NOTE_D4, NOTE_DS5, NOTE_E5, NOTE_F6, NOTE_FS6, NOTE_G7, NOTE_GS7]; 
@@ -79,10 +86,10 @@ bool isMelodyPaused = false;
 bool isMelodySuccessful = false;
 bool isKeyPaused = false;
 bool isKeyCorrect = true;
-int toneIndex = 0;
-int keyIndex = 0;
+byte toneIndex = 0;
+byte keyIndex = 0;
 
-unsigned int LASER_TARGET_ACCURACY = 50;
+const unsigned int LASER_TARGET_ACCURACY = 50;
 Servo laserServo;
 int laserRotation = 0;
 
@@ -91,8 +98,8 @@ int laserRotation = 0;
 const unsigned int TIME_TOTAL_MS = 120000; // 2 minuty = 120000ms
 const unsigned int TIME_DELAY_DURATION_MS = 1;
 unsigned int TIME_MS = 0;
-unsigned long currentTime = 0;
-unsigned long rememberedTime = millis();
+unsigned int currentTime = 0;
+unsigned int rememberedTime = millis();
 
 
 
@@ -105,7 +112,7 @@ string generateID(){ // examples of ID: A23C1, H5833, J11GU. Two last characters
     ID += letters[random(lettersLength)];
     ID += digits[random(digitsLength)];
     ID += digits[random(digitsLength)];
-    for (int i = 0; i < ID_MORSE_CODE_CHAR_COUNT; i++) {
+    for (byte i = 0; i < ID_MORSE_CODE_CHAR_COUNT; i++) {
         int putDigit = random(2); // losuje 0 albo 1
         if (putDigit) { ID += digits[random(digitsLength)];   }
         else          { ID += letters[random(lettersLength)]; }
@@ -114,7 +121,7 @@ string generateID(){ // examples of ID: A23C1, H5833, J11GU. Two last characters
 void generateMorseCode() { // converts last two characters from ID to dots and dashes ("0" is dot, "1" is dash, "2" is space/end); example: "AB" -> "._ _... " -> "01210002"
     if (ID.length() != ID_CHAR_COUNT ) { return; }
 
-    for (int i = 0; i < ID_MORSE_CODE_CHAR_COUNT; i++) {
+    for (byte i = 0; i < ID_MORSE_CODE_CHAR_COUNT; i++) {
         switch (ID[ID_CHAR_COUNT - ID_MORSE_CODE_CHAR_COUNT + i]) {
             case '0': morseCodeLetters += "11111"; break; case '1': morseCodeLetters += "01111"; break;
             case '2': morseCodeLetters += "00111"; break; case '3': morseCodeLetters += "00011"; break;
@@ -142,18 +149,18 @@ void generateMorseCode() { // converts last two characters from ID to dots and d
     morseCodeLettersLength = morseCodeLetters.length();
 }
 void generateWiresMask(){
-    for (int i = 0; i < WIRES_COUNT; i++) {
+    for (byte i = 0; i < WIRES_COUNT; i++) {
         wiresMask[i] == false;
     }
 
-    unsigned int digitCount = 0;
-    unsigned int letterCount = 0;
+    byte digitCount = 0;
+    byte letterCount = 0;
     unsigned int digitSum = 0;
-    unsigned int evenDigitCount = 0;
-    unsigned int vowelCount = 0;      // liczba samogłosek
-    for (int i = 0; i < ID_CHAR_COUNT; i++) {
+    byte evenDigitCount = 0;
+    byte vowelCount = 0;      // liczba samogłosek
+    for (byte i = 0; i < ID_CHAR_COUNT; i++) {
         if (isDigit(ID[i])) {
-            int digit = ID[i] - 48;
+            byte digit = ID[i] - 48;
             digitSum += digit;
             digitCount++;
             if (digit % 2 == 0) {
@@ -196,16 +203,16 @@ void generateWiresMask(){
     if ( (isDigit(ID[3]) && isDigit(ID[4])) || (!isDigit(ID[3]) && !idDigit(ID[4])) ) { wiresMask[4] = false; }
 
 
-    for (int i = 0; i < WIRES_COUNT; i++) {
+    for (byte i = 0; i < WIRES_COUNT; i++) {
         if (wiresMask[i] == true) {
             wiresCutCount++;
         }
     }
 }
 void generateMelodyTones(){
-    int keyboardTonesLength = MELODY_KEYPAD_ROWS * MELODY_KEYPAD_COLS;
-    for (int i = 0; i < MELODY_TONES_COUNT; i++){
-        int index = random(keyboardTonesLength);
+    unsigned int keyboardTonesLength = MELODY_KEYPAD_ROWS * MELODY_KEYPAD_COLS;
+    for (byte i = 0; i < MELODY_TONES_COUNT; i++){
+        unsigned int index = random(keyboardTonesLength);
         melodyKeys[i] = index + 48;
         melodyTones[i] = keyboardTones[index];
     }
@@ -214,14 +221,14 @@ void generateMelodyTones(){
 
 // PLAY
 void playMorse() {
-    unsigned long difference = currentTime - rememberedTime;
+    unsigned int difference = currentTime - rememberedTime;
     if (isMorsePaused && difference >= MORSE_BREAK){
         rememberedTime = currentTime;
         isMorsePaused = false;
         difference = currentTime - rememberedTime;
     }
     if (!isMorsePaused) {
-        int waitingTime = 100;
+        unsigned int waitingTime = 100;
         switch (morseCodeLetters[morseCodeLetterIndex]) {
             case '0': tone(BUZZER, 1000); waitingTime = MORSE_DOT_TIME;   break;
             case '1': tone(BUZZER, 1000); waitingTime = MORSE_DASH_TIME;  break;
@@ -238,7 +245,7 @@ void playMorse() {
     }
 }
 void playMelody() {
-    unsigned long difference = currentTime - rememberedTime;
+    unsigned int difference = currentTime - rememberedTime;
     if (!isMelodyPaused) { //kiedy 0 gra dzwiek
         tone(BUZZER, melodyTones[toneIndex]);
     }
@@ -260,7 +267,7 @@ void playMelody() {
     }
 }
 void playKeys() {
-    unsigned long difference = currentTime - rememberedTime;
+    unsigned int difference = currentTime - rememberedTime;
     if (difference >= MELODY_WAITING_TIME) { //po 5 sekundach braku aktywnosci wracam do morse'a
         buzzerMode = Buzzer::MORSE;
         keyIndex = 0;
@@ -299,8 +306,8 @@ void playKeys() {
 
 // CHECK
 Status checkWires(){
-    int successfulCuts = 0;
-    for (int i = 0; i < WIRES_COUNT; i++) {
+    byte successfulCuts = 0;
+    for (byte i = 0; i < WIRES_COUNT; i++) {
         if (digitalRead(WIRES_BASE + i) == LOW) { // jeżeli kabel jest wyjęty
             if (wiresMask[i] == true) { successfulCuts++; }
             else                      { return Status::FAILURE; }
@@ -338,6 +345,11 @@ void initBomb(){
     morseCodeLettersLength = 0;
     morseCodeLetterIndex = 0;
     isMorsePaused = false;
+    
+    intervalActivationTime = 0;
+    intervalExplosionTime = 0;
+    hasIntervalActivated = false;
+    intervalLEDState = false;
 
     wiresCutCount = 0;
 
@@ -360,9 +372,12 @@ void initBomb(){
     // pinMode(TIMER, ); // @TODO uruchomić timer
     pinMode(LED_FAIL, OUTPUT);
     pinMode(BUZZER, OUTPUT);
+    
+    pinMode(INTERVAL_LED, OUTPUT);
+    pinMode(INTERVAL_BTN, INPUT_PULLUP);
 
     pinMode(LED_SUCC_WIRES, OUTPUT);
-    for (int i = 0; i < WIRES_COUNT; i++) {
+    for (byte i = 0; i < WIRES_COUNT; i++) {
         pinMode(WIRES_BASE + i, INPUT_PULLUP);
     }
 
@@ -409,6 +424,7 @@ void loop() {
     switch (gameStatus) {
         case Status::NEUTRAL: { // gra toczy się
             
+            
             if (digitalRead(MELODY_BTN) == LOW) {
                 rememberedTime = millis();
                 buzzerMode = Buzzer::MELODY;
@@ -424,11 +440,37 @@ void loop() {
                     default: break;
                 }
             }
+            
+            
+            if (hasIntervalActivated) {
+                if (digitalRead(INTERVAL_BTN) == LOW) { // jeśli przycisk wciśnięty, resetuj timery oraz diode
+                    digitalWrite(INTERVAL_LED, LOW);
+                    intervalActivationTime = 0;
+                    intervalExplosionTime  = 0;
+                }
+                if (intervalActivationTime > INTERVAL_TOTAL_ACTIVATION_TIME){
+                    if (intervalExplosionTime > INTERVAL_TOTAL_EXPLOSION_TIME) {
+                        gameStatus = Status::FAILURE;
+                        break;
+                    }
+                    else {
+                        intervalExplosionTime += 1;
+                    }
+                }
+                else {
+                    intervalActivationTime += 1;
+                }
+            }
 
-            // @TODO interval, dioda + przycisk; załącza się wtedy gdy rozwiązemy przynajmniej jeden moduł?
 
             if (TIME_DELAY_MS % 100 == 0) { // wykonuje tu co każde 100ms
                 // @TODO clear 7-seg; calculate current time from TIME_MS; set time on 7-seg; doesnt need to be updated that much?
+                
+                
+                if (hasIntervalActivated && intervalActivationTime > INTERVAL_TOTAL_ACTIVATION_TIME) {
+                    intervalLEDState = !intervalLEDState;
+                    digitalWrite(INTERVAL_LED, intervalLEDState);
+                }
             }
 
             if (TIME_DELAY_MS % 16 == 0) { // wykonuje tu co każde 16ms
@@ -468,6 +510,14 @@ void loop() {
                     default:
                         digitalWrite(LED_SUCC_LASER, LOW);
                         break;
+                }
+                
+                if (!hasIntervalActivated) {
+                    if (wiresStatus  == Status::SUCCESS || 
+                        melodyStatus == Status::SUCCESS ||
+                        laserStatus  == Status::SUCCESS) {
+                        hasIntervalActivated = true;
+                    }
                 }
 
                 if (wiresStatus  == Status::SUCCESS && 
