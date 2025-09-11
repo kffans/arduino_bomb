@@ -1,15 +1,20 @@
 // @TODO wszystkie include
 #include <Servo.h>
 #include <Keypad.h>
+#include <Wire.h>
 #include "pitches.h"
 
 
 
+#define TIMER_ADDR        0x30 
+#define TIMER_DISPLAY     0x00
+#define TIMER_BRIGHTNESS  0x06
+
 // @TODO define wszystkie piny
 // 
 #define BOMB_RESET        1
-#define TIMER             1  /* timer 7-seg */
-#define LED_FAIL          1  /* led przy timerze gdy popełniony błąd */
+//#define TIMER             1  /* timer 7-seg, SDA i SCL (20, 21) */
+//#define LED_FAIL          1  /* led przy timerze gdy popełniony błąd */
 #define BUZZER            1  /* do morsa, przy wybuchu */
 // 
 #define INTERVAL_LED      1  /* żółty led który z czasem miga coraz szybciej */
@@ -97,11 +102,32 @@ int laserRotation = 0;
 
 const unsigned int TIME_TOTAL_MS = 120000; // 2 minuty = 120000ms
 const unsigned int TIME_DELAY_DURATION_MS = 1;
+unsigned int TIMER_SECONDS_LEFT = (TIME_TOTAL_MS / 1000) - 1;
 unsigned int TIME_MS = 0;
 unsigned int currentTime = 0;
 unsigned int rememberedTime = millis();
 
 
+// TIMER
+void timerShowDigits(int d1, int d2, int d3, int d4) {
+    Wire.beginTransmission(TIMER_ADDR);
+    Wire.write(TIMER_DISPLAY);
+    Wire.write(digitTo7Seg(d1)); Wire.write(digitTo7Seg(d2)); Wire.write(digitTo7Seg(1)); Wire.write(digitTo7Seg(d3)); Wire.write(digitTo7Seg(d4));
+    Wire.endTransmission();
+}
+void timerSetBrightness(int level) {
+    if (level < 0) level = 0;
+    if (level > 7) level = 7;
+    Wire.beginTransmission(TIMER_ADDR);
+    Wire.write(TIMER_BRIGHTNESS);
+    Wire.write(level);
+    Wire.endTransmission();
+}
+uint8_t digitTo7Seg(int digit) {
+    static const uint8_t map7seg[10] = { 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F };
+    if (digit < 0 || digit > 9) return 0x00;
+    return map7seg[digit];
+}
 
 // GENERATE
 string generateID(){ // examples of ID: A23C1, H5833, J11GU. Two last characters are from morse code, 1st char is always a letter, 2nd and 3rd are always digits
@@ -366,10 +392,11 @@ void initBomb(){
     currentTime = 0;
     rememberedTime = millis(); // @TODO isn't it too much after resetting?
 
-
+	// timer
+    Wire.begin();
+    timerSetBrightness(7);
 
     // @TODO wypisać wszystkie pinMode i output/input
-    // pinMode(TIMER, ); // @TODO uruchomić timer
     pinMode(LED_FAIL, OUTPUT);
     pinMode(BUZZER, OUTPUT);
     
@@ -463,10 +490,18 @@ void loop() {
             }
 
 
+			if (TIME_DELAY_MS % 1000 == 0) { // wykonuje tu co każdą sekundę
+				TIMER_SECONDS_LEFT--;
+				if(TIMER_SECONDS_LEFT >= 0){
+					int minutesDigit1 = TIMER_SECONDS_LEFT / 600;
+					int minutesDigit2 = (TIMER_SECONDS_LEFT / 60) % 10;
+					int secondsDigit1 = (TIMER_SECONDS_LEFT - ((minutesDigit1 * 10 + minutesDigit2) * 60)) / 10;
+					int secondsDigit2 = (TIMER_SECONDS_LEFT - ((minutesDigit1 * 10 + minutesDigit2) * 60)) % 10;
+					timerShowDigits(minutesDigit1, minutesDigit2, secondsDigit1, secondsDigit2);
+				}
+			}
+			
             if (TIME_DELAY_MS % 100 == 0) { // wykonuje tu co każde 100ms
-                // @TODO clear 7-seg; calculate current time from TIME_MS; set time on 7-seg; doesnt need to be updated that much?
-                
-                
                 if (hasIntervalActivated && intervalActivationTime > INTERVAL_TOTAL_ACTIVATION_TIME) {
                     intervalLEDState = !intervalLEDState;
                     digitalWrite(INTERVAL_LED, intervalLEDState);
