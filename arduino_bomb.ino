@@ -123,7 +123,7 @@ byte keyIndex = 0;
 
 const unsigned int LASER_TARGET_ACCURACY = 930;
 Servo laserServo;
-int laserRotation = 0;
+int laserRotation = 90;
 int laserHold     = 0;
 bool isLaserDone  = false;
 int laserLastCLKState = 0;
@@ -494,7 +494,7 @@ Status checkMaze() {
 Status checkCircles() {
     // @TODO check if steering some wheel rotation
 
-	unsigned int circlesAccuracy = analogRead(CIRCLES_LDR);
+    unsigned int circlesAccuracy = analogRead(CIRCLES_LDR);
     if (circlesAccuracy >= CIRCLES_TARGET_ACCURACY) { // @TODO skalibrować wartość CIRCLES_TARGET_ACCURACY
         circlesHold++;
         if (circlesHold >= 63) { // 63 * 16ms > 1000ms
@@ -509,20 +509,18 @@ Status checkCircles() {
 
 void initBomb(){
     randomSeed(analogRead(A0)); // @NOTE pierwszy pin analogu jest zajęty tutaj, by generować liczby losowe
-
-    // @TODO jeżeli dodano wcześniej zmienne globalne, należy je resetować tutaj
-
+	
     gameStatus = Status::NEUTRAL;
     buzzerMode = Buzzer::SILENT;
 
     ID = "";
-    morseCodeLetters = "";
+    morseCodeLetters       = "";
     morseCodeLettersLength = 0;
-    morseCodeLetterIndex = 0;
-    isMorsePaused = false;
-    
+    morseCodeLetterIndex   = 0;
+    isMorsePaused          = false;
+
     intervalActivationTime = 0;
-    intervalExplosionTime = 0;
+    intervalExplosionTime  = 0;
     hasIntervalActivated = false;
     intervalLEDState = false;
 
@@ -535,17 +533,33 @@ void initBomb(){
     toneIndex = 0;
     keyIndex = 0;
 
-    laserRotation = 0;
+    laserRotation = 90;
+    laserHold     = 0;
+    isLaserDone  = false;
+    laserLastCLKState = 0;
+    laserCurrCLKState = 0;
 
+    mazePlayerX = 0;
+    mazePlayerY = 0;
+    isMazeDone = false;
+    mazeDebounceCounter = 0;
+
+    circlesHold = 0;
+    areCirclesDone = false;
+    circlesRotationUp = 0; circlesRotationLeft = 0; circlesRotationRight = 0;
+    circlesUpLastCLK = 0; circlesLeftLastCLK = 0; circlesRightLastCLK = 0;
+
+    TIMER_SECONDS_LEFT = (TIME_TOTAL_MS / 1000) - 1;
     TIME_MS = 0;
-    currentTime = 0;
-    rememberedTime = millis(); // @TODO isn't it too much after resetting?
+    currentTime = rememberedTime;
+    rememberedTime = millis();
+
+
 
     // timer
     Wire.begin();
     timerSetBrightness(7);
 
-    // @TODO wypisać wszystkie pinMode i output/input
     pinMode(BOMB_RESET_BTN, INPUT_PULLUP);
     
     pinMode(BUZZER, OUTPUT);
@@ -570,48 +584,50 @@ void initBomb(){
     mazeTFT.initR(INITR_BLACKTAB); 
     mazeTFT.fillScreen(ST7735_BLACK);
     
-	circlesServoUp.attach(CIRCLES_SERVO_UP);
-	circlesServoLeft.attach(CIRCLES_SERVO_LEFT);
-	circlesServoRight.attach(CIRCLES_SERVO_RIGHT);
-	pinMode(CIRCLES_STEER_UP_CLK, INPUT);
-	pinMode(CIRCLES_STEER_UP_DT, INPUT);
-	//pinMode(CIRCLES_STEER_UP_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
-	pinMode(CIRCLES_STEER_LEFT_CLK, INPUT);
-	pinMode(CIRCLES_STEER_LEFT_DT, INPUT);
-	//pinMode(CIRCLES_STEER_LEFT_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
-	pinMode(CIRCLES_STEER_RIGHT_CLK, INPUT);
-	pinMode(CIRCLES_STEER_RIGHT_DT, INPUT);
-	pinMode(CIRCLES_STEER_RIGHT_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
-	circlesUpLastCLK = digitalRead(CIRCLES_STEER_UP_CLK);
-	circlesLeftLastCLK = digitalRead(CIRCLES_STEER_LEFT_CLK);
-	circlesRightLastCLK = digitalRead(CIRCLES_STEER_RIGHT_CLK);
+    circlesServoUp.attach(CIRCLES_SERVO_UP);
+    circlesServoLeft.attach(CIRCLES_SERVO_LEFT);
+    circlesServoRight.attach(CIRCLES_SERVO_RIGHT);
+    pinMode(CIRCLES_STEER_UP_CLK, INPUT);
+    pinMode(CIRCLES_STEER_UP_DT, INPUT);
+    //pinMode(CIRCLES_STEER_UP_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
+    pinMode(CIRCLES_STEER_LEFT_CLK, INPUT);
+    pinMode(CIRCLES_STEER_LEFT_DT, INPUT);
+    //pinMode(CIRCLES_STEER_LEFT_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
+    pinMode(CIRCLES_STEER_RIGHT_CLK, INPUT);
+    pinMode(CIRCLES_STEER_RIGHT_DT, INPUT);
+    pinMode(CIRCLES_STEER_RIGHT_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
+    circlesUpLastCLK = digitalRead(CIRCLES_STEER_UP_CLK);
+    circlesLeftLastCLK = digitalRead(CIRCLES_STEER_LEFT_CLK);
+    circlesRightLastCLK = digitalRead(CIRCLES_STEER_RIGHT_CLK);
 
-	strip.begin();
-	strip.show();
+    strip.begin();
+	strip.clear();
+    strip.show();
 
     //digitalWrite(LASER,           HIGH);
     digitalWrite(INTERVAL_LED,    LOW);
 
     // generowanie rozgrywki
-    ID = generateID();	
+    ID = generateID();    
     generateMorseCode();
     generateWiresMask();
     generateMelodyTones();
     laserServo.write(0);
-	circlesServoUp.write(0);
-	circlesServoLeft.write(0);
-	circlesServoRight.write(0);
+    circlesServoUp.write(0);
+    circlesServoLeft.write(0);
+    circlesServoRight.write(0);
+	// @TODO obrocic o 120 stopni wszystkie
 
-	Epd epd;
-	epd.Init();
-	epd.Clear();
-	unsigned char image[1500];
-	Paint paint(image, 400, 28);
-	paint.Clear(UNCOLORED);
-	paint.DrawStringAt(140, 5, "ID: " + ID[0] + ID[1] + ID[2], &Font24, COLORED); // wyświetlanie ID
-	epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
-	delay(1000);
-	epd.Sleep();
+    Epd epd;
+    epd.Init();
+    epd.Clear();
+    unsigned char image[1500];
+    Paint paint(image, 400, 28);
+    paint.Clear(UNCOLORED);
+    paint.DrawStringAt(140, 5, "ID: " + ID[0] + ID[1] + ID[2], &Font24, COLORED); // wyświetlanie ID
+    epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
+    delay(1000);
+    epd.Sleep();
 }
 
 void setup(){
@@ -714,6 +730,7 @@ void loop() {
                     if (laserRotation < 0)   { laserRotation = 0;   }
                     laserServo.write(laserRotation);
                 }
+                laserLastCLKState = laserCurrCLKState;
                 Status laserStatus = Status::SUCCESS;
                 if (!isLaserDone) {
                     laserStatus = checkLaser();
@@ -762,14 +779,14 @@ void loop() {
                         hasIntervalActivated = true;
                     }
                 }
-				
-				strip.clear();
-				if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(0, strip.Color(0, 255, 0)); }
-				if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(1, strip.Color(0, 255, 0)); }
-				if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(2, strip.Color(0, 255, 0)); }
-				if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
-				if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
-				strip.show();
+                
+                strip.clear();
+                if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(0, strip.Color(0, 255, 0)); }
+                if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(1, strip.Color(0, 255, 0)); }
+                if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(2, strip.Color(0, 255, 0)); }
+                if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
+                if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
+                strip.show();
 
                 if (wiresStatus   == Status::SUCCESS && 
                     melodyStatus  == Status::SUCCESS &&
@@ -788,28 +805,28 @@ void loop() {
             break;
         }
         case Status::SUCCESS: { // wygrano grę
-			Epd epd;
-			epd.Init();
-			epd.Clear();
-			unsigned char image[1500];
-			Paint paint(image, 400, 28);
-			paint.Clear(UNCOLORED);
-			paint.DrawStringAt(50, 5, "Bomba rozbrojona", &Font24, COLORED);
-			epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
-			delay(1000);
-			epd.Sleep();
+            Epd epd;
+            epd.Init();
+            epd.Clear();
+            unsigned char image[1500];
+            Paint paint(image, 400, 28);
+            paint.Clear(UNCOLORED);
+            paint.DrawStringAt(50, 5, "Bomba rozbrojona", &Font24, COLORED);
+            epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
+            delay(1000);
+            epd.Sleep();
             //digitalWrite(LASER, LOW);
             break;
         }
         case Status::FAILURE: { // bomba wybuchła
             /* @TODO buzzer wydaje głosy wybuchu, timer gasi się */
-			Epd epd;
-			epd.Init();
-			epd.Display(epd_bitmap_boom1bit);
-			delay(1000);
-			epd.Sleep();
-			
-			while(1) { delay(1000); }
+            Epd epd;
+            epd.Init();
+            epd.Display(epd_bitmap_boom1bit);
+            delay(1000);
+            epd.Sleep();
+            
+            while(1) { delay(1000); }
             //digitalWrite(LASER, LOW);
             break;
         }
