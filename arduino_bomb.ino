@@ -18,8 +18,7 @@
 #define TIMER_BRIGHTNESS    0x06
 
 
-#define BOMB_RESET_BTN      45
-//
+
 #define SUCCESS_LED_STRIP_PIN   44       
 #define SUCCESS_LED_STRIP_COUNT 5 
 //
@@ -75,6 +74,7 @@ enum class Buzzer {SILENT, MORSE, MELODY, KEYBOARD};
 // @TODO zmienne globalne tutaj
 Adafruit_NeoPixel strip(SUCCESS_LED_STRIP_COUNT, SUCCESS_LED_STRIP_PIN, NEO_GRB + NEO_KHZ800); // LED strip
 
+int resetTimer = 0;
 Status gameStatus = Status::NEUTRAL;
 Buzzer buzzerMode = Buzzer::SILENT;
 
@@ -510,6 +510,7 @@ Status checkCircles() {
 void initBomb(){
     randomSeed(analogRead(A0)); // @NOTE pierwszy pin analogu jest zajęty tutaj, by generować liczby losowe
 	
+    resetTimer = 0;
     gameStatus = Status::NEUTRAL;
     buzzerMode = Buzzer::SILENT;
 
@@ -559,8 +560,6 @@ void initBomb(){
     // timer
     Wire.begin();
     timerSetBrightness(7);
-
-    pinMode(BOMB_RESET_BTN, INPUT_PULLUP);
     
     pinMode(BUZZER, OUTPUT);
     
@@ -635,7 +634,17 @@ void setup(){
 }
 
 void loop() {
-    // if (digitalRead(BOMB_RESET_BTN) == LOW) { delay(1000); initBomb(); }
+    if (digitalRead(MELODY_BTN) == LOW && digitalRead(MORSE_BTN) == LOW) {
+        resetTimer++;
+        if (resetTimer >= 3000) {
+            delay(2000); 
+            initBomb();            
+        }
+    }
+    else {
+        resetTimer = 0;
+    }
+    
     currentTime = millis();
 
     switch (gameStatus) {
