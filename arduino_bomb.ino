@@ -5,6 +5,7 @@
 #include <Adafruit_GFX.h>    // maze
 #include <SPI.h>             // maze
 #include "pitches.h"         // buzzer
+#include "boom1bit.h"
 
 
 
