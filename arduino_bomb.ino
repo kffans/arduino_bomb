@@ -936,13 +936,23 @@ void loop() {
                 #endif
                 
                 #ifdef MODULE_LED_STRIP
-                strip.clear();
-                if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(0, strip.Color(0, 255, 0)); }
-                if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(1, strip.Color(0, 255, 0)); }
-                if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(2, strip.Color(0, 255, 0)); }
-                if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
-                if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
-                strip.show();
+                    strip.clear();
+                    #ifdef MODULE_WIRES
+                    if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(0, strip.Color(0, 255, 0)); }
+                    #endif
+                    #ifdef MODULE_MELODY
+                    if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(1, strip.Color(0, 255, 0)); }
+                    #endif
+                    #ifdef MODULE_LASER
+                    if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(2, strip.Color(0, 255, 0)); }
+                    #endif
+                    #ifdef MODULE_MAZE
+                    if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
+                    #endif
+                    #ifdef MODULE_CIRCLES
+                    if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
+                    #endif
+                    strip.show();
                 #endif
 
                 if (true &&
