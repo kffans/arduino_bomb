@@ -1,11 +1,15 @@
-#include <Servo.h>
-#include <Keypad.h>          // Keypad by Mark Stanley v3.1.1, melody
-#include <Wire.h>            // timer
-#include <Adafruit_ST7735.h> // maze
-#include <Adafruit_GFX.h>    // maze
-#include <SPI.h>             // maze
-#include "pitches.h"         // buzzer
-#include "boom1bit.h"
+#include <Servo.h>             // serwa
+#include <Keypad.h>            // Keypad by Mark Stanley v3.1.1; melody
+#include <Wire.h>              // timer
+#include <Adafruit_NeoPixel.h> // pasek ledów
+#include <Adafruit_ST7735.h>   // maze
+#include <Adafruit_GFX.h>      // maze
+#include <SPI.h>               // maze
+#include "pitches.h"           // buzzer
+#include "boom1bit.h"          // obraz wybuchu dla e-papieru
+#include "epd4in2_V2.h"        // e-papier
+#include "imagedata.h"         // e-papier
+#include "epdpaint.h"          // e-papier
 
 
 
@@ -14,54 +18,52 @@
 #define TIMER_BRIGHTNESS    0x06
 
 
-#define BOMB_RESET_BTN      1
+#define BOMB_RESET_BTN      45
 //
-#define BUZZER              1  /* do morsa, przy wybuchu */
+#define SUCCESS_LED_STRIP_PIN   44       
+#define SUCCESS_LED_STRIP_COUNT 5 
 //
-#define MORSE_BTN           1
+#define BUZZER              15  /* do morsa, przy wybuchu */
+//
+#define MORSE_BTN           14
 // 
-#define INTERVAL_LED        1  /* żółty led który z czasem miga coraz szybciej */
-#define INTERVAL_BTN        1  /* przycisk do naciskania co każde 5s */
+#define INTERVAL_LED        38  /* żółty led który z czasem miga coraz szybciej */
+#define INTERVAL_BTN        39  /* przycisk do naciskania co każde 5s */
 // 
-#define LED_SUCC_WIRES      1
-#define WIRES_BASE          1  /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
+#define WIRES_BASE          2   /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
 // 
-#define LED_SUCC_MELODY     1
-#define MELODY_KEYBOARD     14
-#define MELODY_BTN          1
+#define MELODY_KEYBOARD     7   /* @NOTE rezerwuje 7, 8, 9, 10, 11, 12 */
+#define MELODY_BTN          13
 // 
-#define LED_SUCC_LASER      1
-#define LASER_STEER_CLK     2
-#define LASER_STEER_DT      3
-#define LASER_SERVO         4
-//#define LASER               6
-#define LASER_LDR           1  /* fotorezystor do wykrywania lasera*/
+#define LASER_LDR           A1  /* fotorezystor do wykrywania lasera*/
+#define LASER_SERVO         16
+//#define LASER               17
+#define LASER_STEER_CLK     18
+#define LASER_STEER_DT      19
 // 
-#define LED_SUCC_MAZE       1
 #define MAZE_TFT_CS         10
 #define MAZE_TFT_RST        9
 #define MAZE_TFT_DC         8
-#define MAZE_JOY_X          A1
-#define MAZE_JOY_Y          A2
-#define MAZE_JOY_BTN        A3
+#define MAZE_JOY_X          A3
+#define MAZE_JOY_Y          A4
 //
-#define LED_SUCC_CIRCLES    1
-#define CIRCLES_LDR         1   /* fotorezystor do wykrywania swiatla */
-#define CIRCLES_SERVO_UP    1
-#define CIRCLES_SERVO_LEFT  1
-#define CIRCLES_SERVO_RIGHT 1
-#define CIRCLES_STEER_UP_CLK    1
-#define CIRCLES_STEER_UP_DT     1
-#define CIRCLES_STEER_UP_SW     1
-#define CIRCLES_STEER_LEFT_CLK  1
-#define CIRCLES_STEER_LEFT_DT   1
-#define CIRCLES_STEER_LEFT_SW   1
-#define CIRCLES_STEER_RIGHT_CLK 1
-#define CIRCLES_STEER_RIGHT_DT  1
-#define CIRCLES_STEER_RIGHT_SW  1
+#define CIRCLES_LDR         A2  /* fotorezystor do wykrywania swiatla */
+#define CIRCLES_SERVO_UP    30
+#define CIRCLES_SERVO_LEFT  31
+#define CIRCLES_SERVO_RIGHT 32
+#define CIRCLES_STEER_UP_CLK    23
+#define CIRCLES_STEER_UP_DT     24
+//#define CIRCLES_STEER_UP_SW     1
+#define CIRCLES_STEER_LEFT_CLK  25
+#define CIRCLES_STEER_LEFT_DT   26
+//#define CIRCLES_STEER_LEFT_SW   1
+#define CIRCLES_STEER_RIGHT_CLK 27
+#define CIRCLES_STEER_RIGHT_DT  28
+#define CIRCLES_STEER_RIGHT_SW  29
 //
-#define DISP_            1 // @TODO epaper defines
-
+// @NOTE piny do e-papieru są zdefinioweane w pliku epdif.h, jest ich cztery
+#define COLORED     0
+#define UNCOLORED   1
 
 
 enum class Status {NEUTRAL, SUCCESS, FAILURE};
@@ -71,6 +73,8 @@ enum class Buzzer {SILENT, MORSE, MELODY, KEYBOARD};
 
 // GLOBAL VARS
 // @TODO zmienne globalne tutaj
+Adafruit_NeoPixel strip(SUCCESS_LED_STRIP_COUNT, SUCCESS_LED_STRIP_PIN, NEO_GRB + NEO_KHZ800); // LED strip
+
 Status gameStatus = Status::NEUTRAL;
 Buzzer buzzerMode = Buzzer::SILENT;
 
@@ -551,38 +555,30 @@ void initBomb(){
     pinMode(INTERVAL_LED, OUTPUT);
     pinMode(INTERVAL_BTN, INPUT_PULLUP);
 
-    pinMode(LED_SUCC_WIRES, OUTPUT);
     for (byte i = 0; i < WIRES_COUNT; i++) {
         pinMode(WIRES_BASE + i, INPUT_PULLUP);
     }
 
-    pinMode(LED_SUCC_MELODY, OUTPUT);
     pinMode(MELODY_BTN, INPUT_PULLUP);
 
-    pinMode(LED_SUCC_LASER, OUTPUT);
     pinMode(LASER_STEER_CLK, INPUT);
     pinMode(LASER_STEER_DT, INPUT);
     laserServo.attach(LASER_SERVO);
     //pinMode(LASER, OUTPUT);
     laserLastCLKState = digitalRead(LASER_STEER_CLK);
-    pinMode(LASER_LDR, INPUT); /* @TODO fotorezystor jest input/input_pullup? */
-    
-    pinMode(LED_SUCC_MAZE, OUTPUT);
-    pinMode(MAZE_JOY_BTN, INPUT_PULLUP);
+
     mazeTFT.initR(INITR_BLACKTAB); 
     mazeTFT.fillScreen(ST7735_BLACK);
     
-    pinMode(LED_SUCC_CIRCLES, OUTPUT);
-    pinMode(CIRCLES_LDR, INPUT); /* @TODO fotorezystor jest input/input_pullup? */
 	circlesServoUp.attach(CIRCLES_SERVO_UP);
 	circlesServoLeft.attach(CIRCLES_SERVO_LEFT);
 	circlesServoRight.attach(CIRCLES_SERVO_RIGHT);
 	pinMode(CIRCLES_STEER_UP_CLK, INPUT);
 	pinMode(CIRCLES_STEER_UP_DT, INPUT);
-	pinMode(CIRCLES_STEER_UP_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
+	//pinMode(CIRCLES_STEER_UP_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
 	pinMode(CIRCLES_STEER_LEFT_CLK, INPUT);
 	pinMode(CIRCLES_STEER_LEFT_DT, INPUT);
-	pinMode(CIRCLES_STEER_LEFT_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
+	//pinMode(CIRCLES_STEER_LEFT_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
 	pinMode(CIRCLES_STEER_RIGHT_CLK, INPUT);
 	pinMode(CIRCLES_STEER_RIGHT_DT, INPUT);
 	pinMode(CIRCLES_STEER_RIGHT_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
@@ -590,18 +586,14 @@ void initBomb(){
 	circlesLeftLastCLK = digitalRead(CIRCLES_STEER_LEFT_CLK);
 	circlesRightLastCLK = digitalRead(CIRCLES_STEER_RIGHT_CLK);
 
-    digitalWrite(LED_SUCC_WIRES,   LOW);
-    digitalWrite(LED_SUCC_MELODY,  LOW);
-    digitalWrite(LED_SUCC_LASER,   LOW);
-    digitalWrite(LED_SUCC_MAZE,    LOW);
-    digitalWrite(LED_SUCC_CIRCLES, LOW);
+	strip.begin();
+	strip.show();
+
     //digitalWrite(LASER,           HIGH);
     digitalWrite(INTERVAL_LED,    LOW);
 
-
     // generowanie rozgrywki
-    ID = generateID();
-    // @TODO wyswietl część id na e-papierze
+    ID = generateID();	
     generateMorseCode();
     generateWiresMask();
     generateMelodyTones();
@@ -609,6 +601,17 @@ void initBomb(){
 	circlesServoUp.write(0);
 	circlesServoLeft.write(0);
 	circlesServoRight.write(0);
+
+	Epd epd;
+	epd.Init();
+	epd.Clear();
+	unsigned char image[1500];
+	Paint paint(image, 400, 28);
+	paint.Clear(UNCOLORED);
+	paint.DrawStringAt(140, 5, "ID: " + ID[0] + ID[1] + ID[2], &Font24, COLORED); // wyświetlanie ID
+	epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
+	delay(1000);
+	epd.Sleep();
 }
 
 void setup(){
@@ -689,9 +692,6 @@ void loop() {
             if (TIME_MS % 16 == 0) { // wykonuje tu co każde 16ms
                 Status wiresStatus = checkWires();
                 switch (wiresStatus) {
-                    case Status::SUCCESS:
-                        digitalWrite(LED_SUCC_WIRES, HIGH);
-                        break;
                     case Status::FAILURE:
                         gameStatus = Status::FAILURE; // bomba wybucha
                         break;
@@ -700,12 +700,6 @@ void loop() {
                
 
                 Status melodyStatus = checkMelody();
-                switch (melodyStatus) {
-                    case Status::SUCCESS:
-                        digitalWrite(LED_SUCC_MELODY, HIGH);
-                        break;
-                    default: break;
-                }
                 
                 
                 laserCurrCLKState = digitalRead(LASER_STEER_CLK);
@@ -726,10 +720,8 @@ void loop() {
                     switch (laserStatus) {
                         case Status::SUCCESS:
                             isLaserDone = true;
-                            digitalWrite(LED_SUCC_LASER, HIGH);
                             break;
                         default:
-                            digitalWrite(LED_SUCC_LASER, LOW);
                             break;
                     }
                 }
@@ -742,7 +734,6 @@ void loop() {
                         case Status::SUCCESS:
                             isMazeDone = true;
                             mazeDrawEnd();
-                            digitalWrite(LED_SUCC_MAZE, HIGH);
                             break;
                         default: break;
                     }
@@ -755,10 +746,8 @@ void loop() {
                     switch (circlesStatus) {
                         case Status::SUCCESS:
                             areCirclesDone = true;
-                            digitalWrite(LED_SUCC_CIRCLES, HIGH);
                             break;
                         default:
-                            digitalWrite(LED_SUCC_CIRCLES, LOW);
                             break;
                     }
                 }
@@ -773,6 +762,14 @@ void loop() {
                         hasIntervalActivated = true;
                     }
                 }
+				
+				strip.clear();
+				if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(0, strip.Color(0, 255, 0)); }
+				if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(1, strip.Color(0, 255, 0)); }
+				if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(2, strip.Color(0, 255, 0)); }
+				if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
+				if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
+				strip.show();
 
                 if (wiresStatus   == Status::SUCCESS && 
                     melodyStatus  == Status::SUCCESS &&
@@ -791,12 +788,28 @@ void loop() {
             break;
         }
         case Status::SUCCESS: { // wygrano grę
-            /* @TODO ekran timera się zapisuje, epapier czysci ekran i bierze napis "Bomba rozbrojona" */
+			Epd epd;
+			epd.Init();
+			epd.Clear();
+			unsigned char image[1500];
+			Paint paint(image, 400, 28);
+			paint.Clear(UNCOLORED);
+			paint.DrawStringAt(50, 5, "Bomba rozbrojona", &Font24, COLORED);
+			epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
+			delay(1000);
+			epd.Sleep();
             //digitalWrite(LASER, LOW);
             break;
         }
         case Status::FAILURE: { // bomba wybuchła
-            /* @TODO buzzer wydaje głosy wybuchu, epapier sie czyści i pokazuje img wybuch, timer gasi się */
+            /* @TODO buzzer wydaje głosy wybuchu, timer gasi się */
+			Epd epd;
+			epd.Init();
+			epd.Display(epd_bitmap_boom1bit);
+			delay(1000);
+			epd.Sleep();
+			
+			while(1) { delay(1000); }
             //digitalWrite(LASER, LOW);
             break;
         }
