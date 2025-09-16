@@ -121,7 +121,7 @@ bool isKeyCorrect = true;
 byte toneIndex = 0;
 byte keyIndex = 0;
 
-const unsigned int LASER_TARGET_ACCURACY = 50;
+const unsigned int LASER_TARGET_ACCURACY = 930;
 Servo laserServo;
 int laserRotation = 0;
 int laserHold     = 0;
