@@ -1,5 +1,5 @@
 #include <Servo.h>
-#include <Keypad.h>          // melody
+#include <Keypad.h>          // Keypad by Mark Stanley v3.1.1, melody
 #include <Wire.h>            // timer
 #include <Adafruit_ST7735.h> // maze
 #include <Adafruit_GFX.h>    // maze
@@ -79,8 +79,8 @@ const unsigned int MORSE_DOT_TIME   = 150;
 const unsigned int MORSE_DASH_TIME  = 500;
 const unsigned int MORSE_BREAK      = 600;
 const unsigned int MORSE_LONG_BREAK = 1600;
-string ID = "";
-string morseCodeLetters     = "";
+String ID = "";
+String morseCodeLetters     = "";
 byte morseCodeLettersLength = 0;
 byte morseCodeLetterIndex   = 0;
 bool isMorsePaused = false;
@@ -106,7 +106,7 @@ byte rowPins[MELODY_KEYPAD_ROWS] = { MELODY_KEYBOARD,     MELODY_KEYBOARD + 1, M
 byte colPins[MELODY_KEYPAD_COLS] = { MELODY_KEYBOARD + 3, MELODY_KEYBOARD + 4, MELODY_KEYBOARD + 5 }; // Piny kolumn
 char keymap[MELODY_KEYPAD_ROWS][MELODY_KEYPAD_COLS] = { { '1', '2', '3' }, { '4', '5', '6' }, { '7', '8', '9' } }; 
 Keypad keypad = Keypad(makeKeymap(keymap), rowPins, colPins, MELODY_KEYPAD_ROWS, MELODY_KEYPAD_COLS); //inicjalizacja klawiatury
-const int keyboardTones[MELODY_KEYPAD_ROWS * MELODY_KEYPAD_COLS] = [NOTE_C1, NOTE_CS4, NOTE_D4, NOTE_DS5, NOTE_E5, NOTE_F6, NOTE_FS6, NOTE_G7, NOTE_GS7]; 
+const int keyboardTones[MELODY_KEYPAD_ROWS * MELODY_KEYPAD_COLS] = {NOTE_C1, NOTE_CS4, NOTE_D4, NOTE_DS5, NOTE_E5, NOTE_F6, NOTE_FS6, NOTE_G7, NOTE_GS7}; 
 int melodyTones[MELODY_TONES_COUNT];
 char melodyKeys[MELODY_TONES_COUNT];
 bool isMelodyPaused = false;
@@ -210,9 +210,9 @@ void mazeDrawEnd(){
 }
 
 // GENERATE
-string generateID(){ // examples of ID: A23C1, H5833, J11GU. Two last characters are from morse code, 1st char is always a letter, 2nd and 3rd are always digits
-    string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    string digits = "0123456789";
+String generateID(){ // examples of ID: A23C1, H5833, J11GU. Two last characters are from morse code, 1st char is always a letter, 2nd and 3rd are always digits
+    String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    String digits = "0123456789";
     unsigned int lettersLength = letters.length();
     unsigned int digitsLength = digits.length();
     ID += letters[random(lettersLength)];
@@ -294,7 +294,7 @@ void generateWiresMask(){
     if (digitCount == evenDigitCount) { wiresMask[0] = true; wiresMask[2] = true; wiresMask[4] = true; }
     if ( (!isDigit(ID[3]) && abs(ID[0] - ID[3]) == 1) || (!isDigit(ID[4]) && abs(ID[0] - ID[4]) == 1) || (!isDigit(ID[3]) && !isDigit(ID[4]) && abs(ID[3] - ID[4]) == 1) ) { wiresMask[3] = true; }
 
-    if ( (isDigit(ID[3]) && isDigit(ID[4])) || (!isDigit(ID[3]) && !idDigit(ID[4])) ) { wiresMask[4] = false; }
+    if ( (isDigit(ID[3]) && isDigit(ID[4])) || (!isDigit(ID[3]) && !isDigit(ID[4])) ) { wiresMask[4] = false; }
 
     bool canCutSomething = false;
     for (int i = 0; i < WIRES_COUNT; i++) {
@@ -306,7 +306,7 @@ void generateWiresMask(){
     if (!canCutSomething) { wiresMask[0] = true; wiresMask[1] = true; wiresMask[3] = true; wiresMask[4] = true; }
 
 
-    if ( (isDigit(ID[3]) && isDigit(ID[4])) || (!isDigit(ID[3]) && !idDigit(ID[4])) ) { wiresMask[4] = false; }
+    if ( (isDigit(ID[3]) && isDigit(ID[4])) || (!isDigit(ID[3]) && !isDigit(ID[4])) ) { wiresMask[4] = false; }
 
 
     for (byte i = 0; i < WIRES_COUNT; i++) {
@@ -472,7 +472,7 @@ Status checkMaze() {
             mazeDebounceCounter = 13; // 13 * 16ms > 200ms
             return Status::NEUTRAL;
             MazeDebounce:
-            
+            ;
         }
         if (maze[newY][newX] == 2) {
             mazePlayerX = newX;
@@ -567,7 +567,7 @@ void initBomb(){
     pinMode(LASER_LDR, INPUT); /* @TODO fotorezystor jest input/input_pullup? */
     
     pinMode(LED_SUCC_MAZE, OUTPUT);
-    pinMode(MAZE_JOY_BUTTON, INPUT_PULLUP);
+    pinMode(MAZE_JOY_BTN, INPUT_PULLUP);
     mazeTFT.initR(INITR_BLACKTAB); 
     mazeTFT.fillScreen(ST7735_BLACK);
     
@@ -594,7 +594,7 @@ void initBomb(){
     digitalWrite(LED_SUCC_LASER,   LOW);
     digitalWrite(LED_SUCC_MAZE,    LOW);
     digitalWrite(LED_SUCC_CIRCLES, LOW);
-    digitalWrite(LASER,           HIGH);
+    //digitalWrite(LASER,           HIGH);
     digitalWrite(INTERVAL_LED,    LOW);
 
 
@@ -667,7 +667,7 @@ void loop() {
             }
 
 
-            if (TIME_DELAY_MS % 1000 == 0) { // wykonuje tu co każdą sekundę
+            if (TIME_MS % 1000 == 0) { // wykonuje tu co każdą sekundę
                 TIMER_SECONDS_LEFT--;
                 if(TIMER_SECONDS_LEFT >= 0){
                     int minutesDigit1 = TIMER_SECONDS_LEFT / 600;
@@ -678,14 +678,14 @@ void loop() {
                 }
             }
             
-            if (TIME_DELAY_MS % 100 == 0) { // wykonuje tu co każde 100ms
+            if (TIME_MS % 100 == 0) { // wykonuje tu co każde 100ms
                 if (hasIntervalActivated && intervalActivationTime > INTERVAL_TOTAL_ACTIVATION_TIME) {
                     intervalLEDState = !intervalLEDState;
                     digitalWrite(INTERVAL_LED, intervalLEDState);
                 }
             }
 
-            if (TIME_DELAY_MS % 16 == 0) { // wykonuje tu co każde 16ms
+            if (TIME_MS % 16 == 0) { // wykonuje tu co każde 16ms
                 Status wiresStatus = checkWires();
                 switch (wiresStatus) {
                     case Status::SUCCESS:
@@ -791,12 +791,12 @@ void loop() {
         }
         case Status::SUCCESS: { // wygrano grę
             /* @TODO ekran timera się zapisuje, epapier czysci ekran i bierze napis "Bomba rozbrojona" */
-            digitalWrite(LASER, LOW);
+            //digitalWrite(LASER, LOW);
             break;
         }
         case Status::FAILURE: { // bomba wybuchła
             /* @TODO buzzer wydaje głosy wybuchu, epapier sie czyści i pokazuje img wybuch, timer gasi się */
-            digitalWrite(LASER, LOW);
+            //digitalWrite(LASER, LOW);
             break;
         }
         default: break;
