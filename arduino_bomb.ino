@@ -1,41 +1,65 @@
-// @TODO wszystkie include
 #include <Servo.h>
-#include <Keypad.h>
-#include <Wire.h>
-#include "pitches.h"
+#include <Keypad.h>          // melody
+#include <Wire.h>            // timer
+#include <Adafruit_ST7735.h> // maze
+#include <Adafruit_GFX.h>    // maze
+#include <SPI.h>             // maze
+#include "pitches.h"         // buzzer
 
 
 
-#define TIMER_ADDR        0x30 
-#define TIMER_DISPLAY     0x00
-#define TIMER_BRIGHTNESS  0x06
+#define TIMER_ADDR          0x30 
+#define TIMER_DISPLAY       0x00
+#define TIMER_BRIGHTNESS    0x06
 
-// @TODO define wszystkie piny
+
+#define BOMB_RESET_BTN      1
+//
+#define BUZZER              1  /* do morsa, przy wybuchu */
+//
+#define MORSE_BTN           1
 // 
-#define BOMB_RESET        1
-//#define TIMER             1  /* timer 7-seg, SDA i SCL (20, 21) */
-//#define LED_FAIL          1  /* led przy timerze gdy popełniony błąd */
-#define BUZZER            1  /* do morsa, przy wybuchu */
+#define INTERVAL_LED        1  /* żółty led który z czasem miga coraz szybciej */
+#define INTERVAL_BTN        1  /* przycisk do naciskania co każde 5s */
 // 
-#define INTERVAL_LED      1  /* żółty led który z czasem miga coraz szybciej */
-#define INTERVAL_BTN      1  /* przycisk do naciskania co każde 5s */
+#define LED_SUCC_WIRES      1
+#define WIRES_BASE          1  /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
 // 
-#define LED_SUCC_WIRES    1
-#define WIRES_BASE        1  /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
+#define LED_SUCC_MELODY     1
+#define MELODY_KEYBOARD     14
+#define MELODY_BTN          1
 // 
-#define LED_SUCC_MELODY   1
-#define MELODY_KEYBOARD   14
-#define MELODY_BTN        1
+#define LED_SUCC_LASER      1
+#define LASER_STEER_CLK     2
+#define LASER_STEER_DT      3
+#define LASER_SERVO         4
+//#define LASER               6
+#define LASER_LDR           1  /* fotorezystor do wykrywania lasera*/
 // 
-#define LED_SUCC_LASER    1
-#define LASER_STEER_LEFT  2  /* sterowanie serwo w lewo */
-#define LASER_STEER_RIGHT 3  /* sterowanie serwo w prawo */
-#define LASER_SERVO       4
-#define LASER             6
-#define LASER_LDR         1  /* fotorezystor do wykrywania lasera*/
-// 
-#define OLED              1
-#define OLED_JOYSTICK     1
+#define LED_SUCC_MAZE       1
+#define MAZE_TFT_CS         10
+#define MAZE_TFT_RST        9
+#define MAZE_TFT_DC         8
+#define MAZE_JOY_X          A1
+#define MAZE_JOY_Y          A2
+#define MAZE_JOY_BTN        A3
+//
+#define LED_SUCC_CIRCLES    1
+#define CIRCLES_LDR         1   /* fotorezystor do wykrywania swiatla */
+#define CIRCLES_SERVO_UP    1
+#define CIRCLES_SERVO_LEFT  1
+#define CIRCLES_SERVO_RIGHT 1
+#define CIRCLES_STEER_UP_CLK    1
+#define CIRCLES_STEER_UP_DT     1
+#define CIRCLES_STEER_UP_SW     1
+#define CIRCLES_STEER_LEFT_CLK  1
+#define CIRCLES_STEER_LEFT_DT   1
+#define CIRCLES_STEER_LEFT_SW   1
+#define CIRCLES_STEER_RIGHT_CLK 1
+#define CIRCLES_STEER_RIGHT_DT  1
+#define CIRCLES_STEER_RIGHT_SW  1
+//
+#define DISP_            1 // @TODO epaper defines
 
 
 
@@ -47,7 +71,7 @@ enum class Buzzer {SILENT, MORSE, MELODY, KEYBOARD};
 // GLOBAL VARS
 // @TODO zmienne globalne tutaj
 Status gameStatus = Status::NEUTRAL;
-Buzzer buzzerMode = Buzzer::MORSE;
+Buzzer buzzerMode = Buzzer::SILENT;
 
 const byte ID_CHAR_COUNT            = 5;
 const byte ID_MORSE_CODE_CHAR_COUNT = 2;
@@ -67,8 +91,6 @@ unsigned int intervalActivationTime = 0;
 unsigned int intervalExplosionTime  = 0;
 bool hasIntervalActivated = false;
 bool intervalLEDState = false;
-
-// @TODO zmienne dla 7-SEG
 
 const byte WIRES_COUNT = 5;
 bool wiresMask[WIRES_COUNT]; // tam gdzie jest "true", ma być przecięty kabel
@@ -97,8 +119,37 @@ byte keyIndex = 0;
 const unsigned int LASER_TARGET_ACCURACY = 50;
 Servo laserServo;
 int laserRotation = 0;
+int laserHold     = 0;
+bool isLaserDone  = false;
+int laserLastCLKState = 0;
+int laserCurrCLKState = 0;
 
-// @TODO zmienne dla OLED
+const int mazeWidth = 8;
+const int mazeHeight = 10;
+const int maze[mazeHeight][mazeWidth] = {
+  {0, 1, 0, 0, 0, 0, 1, 0},
+  {0, 1, 0, 1, 1, 0, 1, 0},
+  {0, 0, 0, 1, 0, 0, 0, 0},
+  {1, 1, 0, 1, 0, 1, 1, 1},
+  {0, 0, 0, 1, 0, 0, 0, 0},
+  {0, 1, 1, 1, 1, 1, 1, 0},
+  {0, 0, 0, 0, 0, 0, 1, 0},
+  {1, 0, 1, 1, 1, 0, 0, 0},
+  {0, 0, 0, 2, 1, 1, 1, 0},
+  {0, 1, 1, 0, 0, 0, 0, 0}
+};
+Adafruit_ST7735 mazeTFT = Adafruit_ST7735(MAZE_TFT_CS, MAZE_TFT_DC, MAZE_TFT_RST);
+int mazePlayerX = 0;
+int mazePlayerY = 0;
+bool isMazeDone = false;
+unsigned int mazeDebounceCounter = 0;
+
+const unsigned int CIRCLES_TARGET_ACCURACY = 50;
+int circlesHold = 0;
+bool areCirclesDone = false;
+Servo circlesServoUp, circlesServoLeft, circlesServoRight;
+int circlesRotationUp = 0, circlesRotationLeft = 0, circlesRotationRight = 0;
+int circlesUpLastCLK, circlesLeftLastCLK, circlesRightLastCLK;
 
 const unsigned int TIME_TOTAL_MS = 120000; // 2 minuty = 120000ms
 const unsigned int TIME_DELAY_DURATION_MS = 1;
@@ -127,6 +178,35 @@ uint8_t digitTo7Seg(int digit) {
     static const uint8_t map7seg[10] = { 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F };
     if (digit < 0 || digit > 9) return 0x00;
     return map7seg[digit];
+}
+
+
+// MAZE
+void mazeDraw() {
+    mazeTFT.fillScreen(ST7735_BLACK);
+    for (int y = 0; y < mazeHeight; y++) {
+        for (int x = 0; x < mazeWidth; x++) {
+            if (maze[y][x] == 1) {
+                mazeTFT.fillRect(x * 16, y * 16, 16, 16, ST77XX_WHITE); // ściana
+            }
+        }
+    }
+}
+void mazeDrawPlayer() {
+    // Gracz = biały kwadrat 8x8 px w środku pola
+    mazeTFT.fillRect(mazePlayerX * 16 + 4, mazePlayerY * 16 + 4, 8, 8, ST77XX_WHITE);
+}
+
+void mazeDrawFinish(){
+    //wyjscie - pusty bialy kwadracik
+    mazeTFT.drawRect(3 * 16 + 4, 8 * 16 + 4, 8, 8, ST77XX_WHITE);
+}
+
+void mazeDrawEnd(){
+    mazeTFT.fillScreen(ST7735_BLACK);
+    //wyjscie - pusty bialy kwadracik
+    mazeTFT.setTextSize(3);
+    mazeTFT.write("Wygrana!");
 }
 
 // GENERATE
@@ -265,7 +345,7 @@ void playMorse() {
             rememberedTime = currentTime;
             noTone(BUZZER);
             if (morseCodeLetterIndex < morseCodeLettersLength - 1) { morseCodeLetterIndex++; }
-            else                                                   { morseCodeLetterIndex = 0; }
+            else                                                   { morseCodeLetterIndex = 0; buzzerMode = Buzzer::SILENT; }
             isMorsePaused = true;
         }
     }
@@ -295,7 +375,7 @@ void playMelody() {
 void playKeys() {
     unsigned int difference = currentTime - rememberedTime;
     if (difference >= MELODY_WAITING_TIME) { //po 5 sekundach braku aktywnosci wracam do morse'a
-        buzzerMode = Buzzer::MORSE;
+        buzzerMode = Buzzer::SILENT;
         keyIndex = 0;
     }
     char currentKey = keypad.getKey();
@@ -313,7 +393,7 @@ void playKeys() {
         if (keyIndex == MELODY_TONES_COUNT) {
             if (isKeyCorrect) { //gdy 3 klawisze wcisniecie sprawdzenie czy nie bylo pomylki
                 noTone(BUZZER);
-                buzzerMode = Buzzer::MORSE;
+                buzzerMode = Buzzer::SILENT;
                 isMelodySuccessful = true;
             }
             else { //gdy zdarzyla sie pomylka mozna wpisac kod ponownie
@@ -353,7 +433,71 @@ Status checkMelody() {
 Status checkLaser() {
     unsigned int laserAccuracy = analogRead(LASER_LDR);
     if (laserAccuracy >= LASER_TARGET_ACCURACY) { // @TODO skalibrować wartość LASER_TARGET_ACCURACY
-        return Status::SUCCESS;
+        laserHold++;
+        if (laserHold >= 63) { // 63 * 16ms > 1000ms
+            return Status::SUCCESS;
+        }
+    }
+    else {
+        laserHold = 0;
+    }
+    return Status::NEUTRAL;
+}
+Status checkMaze() {
+    if (mazeDebounceCounter > 1) {
+        mazeDebounceCounter--;
+        return Status::NEUTRAL;
+    }
+    else if (mazeDebounceCounter == 1) {
+        mazeDebounceCounter--;
+        goto MazeDebounce;
+    }
+    
+    int xVal = analogRead(MAZE_JOY_X), yVal = analogRead(MAZE_JOY_Y);
+    int dx = 0, dy = 0;
+
+    if (xVal < 300) dx =  1;  // w prawo
+    if (xVal > 700) dx = -1;  // w lewo
+    if (yVal < 300) dy =  1;  // w dół
+    if (yVal > 700) dy = -1;  // w górę
+
+    int newX = mazePlayerX + dx;
+    int newY = mazePlayerY + dy;
+
+    if (newX != mazePlayerX || newY != mazePlayerY) { // has player position changed
+        // sprawdź granice i ścianę
+        if (newX >= 0 && newX < mazeWidth && newY >= 0 && newY < mazeHeight && maze[newY][newX] == 0) {
+            mazePlayerX = newX;
+            mazePlayerY = newY;
+            mazeDebounceCounter = 13; // 13 * 16ms > 200ms
+            return Status::NEUTRAL;
+            MazeDebounce:
+            
+        }
+        if (maze[newY][newX] == 2) {
+            mazePlayerX = newX;
+            mazePlayerY = newY;
+            return Status::SUCCESS;
+        }
+        mazeDraw();
+        mazeDrawPlayer();
+        mazeDrawFinish();
+    }
+    
+    return Status::NEUTRAL;
+}
+Status checkCircles() {
+    // @TODO check if steering some wheel rotation
+
+	unsigned int circlesAccuracy = analogRead(CIRCLES_LDR);
+    if (circlesAccuracy >= CIRCLES_TARGET_ACCURACY) { // @TODO skalibrować wartość CIRCLES_TARGET_ACCURACY
+        circlesHold++;
+        if (circlesHold >= 63) { // 63 * 16ms > 1000ms
+            return Status::SUCCESS;
+        }
+    }
+    else {
+        circlesHold = 0;
     }
     return Status::NEUTRAL;
 }
@@ -364,7 +508,7 @@ void initBomb(){
     // @TODO jeżeli dodano wcześniej zmienne globalne, należy je resetować tutaj
 
     gameStatus = Status::NEUTRAL;
-    buzzerMode = Buzzer::MORSE;
+    buzzerMode = Buzzer::SILENT;
 
     ID = "";
     morseCodeLetters = "";
@@ -392,13 +536,16 @@ void initBomb(){
     currentTime = 0;
     rememberedTime = millis(); // @TODO isn't it too much after resetting?
 
-	// timer
+    // timer
     Wire.begin();
     timerSetBrightness(7);
 
     // @TODO wypisać wszystkie pinMode i output/input
-    pinMode(LED_FAIL, OUTPUT);
+    pinMode(BOMB_RESET_BTN, INPUT_PULLUP);
+    
     pinMode(BUZZER, OUTPUT);
+    
+    pinMode(MORSE_BTN, INPUT_PULLUP);
     
     pinMode(INTERVAL_LED, OUTPUT);
     pinMode(INTERVAL_BTN, INPUT_PULLUP);
@@ -412,32 +559,55 @@ void initBomb(){
     pinMode(MELODY_BTN, INPUT_PULLUP);
 
     pinMode(LED_SUCC_LASER, OUTPUT);
-    pinMode(LASER_STEER_LEFT, INPUT);
-    pinMode(LASER_STEER_RIGHT, INPUT);
+    pinMode(LASER_STEER_CLK, INPUT);
+    pinMode(LASER_STEER_DT, INPUT);
     laserServo.attach(LASER_SERVO);
-    pinMode(LASER, OUTPUT);
+    //pinMode(LASER, OUTPUT);
+    laserLastCLKState = digitalRead(LASER_STEER_CLK);
     pinMode(LASER_LDR, INPUT); /* @TODO fotorezystor jest input/input_pullup? */
+    
+    pinMode(LED_SUCC_MAZE, OUTPUT);
+    pinMode(MAZE_JOY_BUTTON, INPUT_PULLUP);
+    mazeTFT.initR(INITR_BLACKTAB); 
+    mazeTFT.fillScreen(ST7735_BLACK);
+    
+    pinMode(LED_SUCC_CIRCLES, OUTPUT);
+    pinMode(CIRCLES_LDR, INPUT); /* @TODO fotorezystor jest input/input_pullup? */
+	circlesServoUp.attach(CIRCLES_SERVO_UP);
+	circlesServoLeft.attach(CIRCLES_SERVO_LEFT);
+	circlesServoRight.attach(CIRCLES_SERVO_RIGHT);
+	pinMode(CIRCLES_STEER_UP_CLK, INPUT);
+	pinMode(CIRCLES_STEER_UP_DT, INPUT);
+	pinMode(CIRCLES_STEER_UP_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
+	pinMode(CIRCLES_STEER_LEFT_CLK, INPUT);
+	pinMode(CIRCLES_STEER_LEFT_DT, INPUT);
+	pinMode(CIRCLES_STEER_LEFT_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
+	pinMode(CIRCLES_STEER_RIGHT_CLK, INPUT);
+	pinMode(CIRCLES_STEER_RIGHT_DT, INPUT);
+	pinMode(CIRCLES_STEER_RIGHT_SW, INPUT_PULLUP); // @TODO zmienić ten pullup?
+	circlesUpLastCLK = digitalRead(CIRCLES_STEER_UP_CLK);
+	circlesLeftLastCLK = digitalRead(CIRCLES_STEER_LEFT_CLK);
+	circlesRightLastCLK = digitalRead(CIRCLES_STEER_RIGHT_CLK);
 
-    pinMode(INTERVAL_LED, OUTPUT);
-   
-    // @TODO dokonczyc inicjalizacje/pinmode OLED'a oraz jego joysticka
-    //pinMode(OLED,);
-    //pinMode(OLED_JOYSTICK, INPUT);
-
-    digitalWrite(LED_FAIL,        LOW);
-    digitalWrite(LED_SUCC_WIRES,  LOW);
-    digitalWrite(LED_SUCC_MELODY, LOW);
-    digitalWrite(LED_SUCC_LASER,  LOW);
+    digitalWrite(LED_SUCC_WIRES,   LOW);
+    digitalWrite(LED_SUCC_MELODY,  LOW);
+    digitalWrite(LED_SUCC_LASER,   LOW);
+    digitalWrite(LED_SUCC_MAZE,    LOW);
+    digitalWrite(LED_SUCC_CIRCLES, LOW);
     digitalWrite(LASER,           HIGH);
     digitalWrite(INTERVAL_LED,    LOW);
 
 
     // generowanie rozgrywki
     ID = generateID();
+    // @TODO wyswietl część id na e-papierze
     generateMorseCode();
     generateWiresMask();
     generateMelodyTones();
     laserServo.write(0);
+	circlesServoUp.write(0);
+	circlesServoLeft.write(0);
+	circlesServoRight.write(0);
 }
 
 void setup(){
@@ -445,7 +615,7 @@ void setup(){
 }
 
 void loop() {
-    // if (digitalRead(BOMB_RESET) == HIGH) { initBomb(); } // @TODO inaczej to zrobić, niech się wykonuje tylko po puszczeniu przycisku
+    // if (digitalRead(BOMB_RESET_BTN) == LOW) { delay(1000); initBomb(); }
     currentTime = millis();
 
     switch (gameStatus) {
@@ -458,6 +628,13 @@ void loop() {
                 noTone(BUZZER);
                 toneIndex = 0;
                 isMelodyPaused = false;
+            }
+            else if (digitalRead(MORSE_BTN) == LOW) {
+                rememberedTime = millis();
+                buzzerMode = Buzzer::MORSE;
+                noTone(BUZZER);
+                morseCodeLetterIndex = 0;
+                isMorsePaused = false;
             }
             else {
                 switch (buzzerMode) {
@@ -490,17 +667,17 @@ void loop() {
             }
 
 
-			if (TIME_DELAY_MS % 1000 == 0) { // wykonuje tu co każdą sekundę
-				TIMER_SECONDS_LEFT--;
-				if(TIMER_SECONDS_LEFT >= 0){
-					int minutesDigit1 = TIMER_SECONDS_LEFT / 600;
-					int minutesDigit2 = (TIMER_SECONDS_LEFT / 60) % 10;
-					int secondsDigit1 = (TIMER_SECONDS_LEFT - ((minutesDigit1 * 10 + minutesDigit2) * 60)) / 10;
-					int secondsDigit2 = (TIMER_SECONDS_LEFT - ((minutesDigit1 * 10 + minutesDigit2) * 60)) % 10;
-					timerShowDigits(minutesDigit1, minutesDigit2, secondsDigit1, secondsDigit2);
-				}
-			}
-			
+            if (TIME_DELAY_MS % 1000 == 0) { // wykonuje tu co każdą sekundę
+                TIMER_SECONDS_LEFT--;
+                if(TIMER_SECONDS_LEFT >= 0){
+                    int minutesDigit1 = TIMER_SECONDS_LEFT / 600;
+                    int minutesDigit2 = (TIMER_SECONDS_LEFT / 60) % 10;
+                    int secondsDigit1 = (TIMER_SECONDS_LEFT - ((minutesDigit1 * 10 + minutesDigit2) * 60)) / 10;
+                    int secondsDigit2 = (TIMER_SECONDS_LEFT - ((minutesDigit1 * 10 + minutesDigit2) * 60)) % 10;
+                    timerShowDigits(minutesDigit1, minutesDigit2, secondsDigit1, secondsDigit2);
+                }
+            }
+            
             if (TIME_DELAY_MS % 100 == 0) { // wykonuje tu co każde 100ms
                 if (hasIntervalActivated && intervalActivationTime > INTERVAL_TOTAL_ACTIVATION_TIME) {
                     intervalLEDState = !intervalLEDState;
@@ -509,8 +686,6 @@ void loop() {
             }
 
             if (TIME_DELAY_MS % 16 == 0) { // wykonuje tu co każde 16ms
-                // @TODO clear OLED; display info
-                
                 Status wiresStatus = checkWires();
                 switch (wiresStatus) {
                     case Status::SUCCESS:
@@ -531,33 +706,78 @@ void loop() {
                     default: break;
                 }
                 
-
-                if (digitalRead(LASER_STEER_LEFT)  == 0) { laserRotation += 5; }
-                if (digitalRead(LASER_STEER_RIGHT) == 0) { laserRotation -= 5; }
-                if (laserRotation > 180) { laserRotation = 180; } 
-                if (laserRotation < 0) { laserRotation = 0; } 
-                laserServo.write(laserRotation);
-                Status laserStatus = checkLaser();
-                switch (laserStatus) {
-                    case Status::SUCCESS:
-                        digitalWrite(LED_SUCC_LASER, HIGH);
-                        break;
-                    default:
-                        digitalWrite(LED_SUCC_LASER, LOW);
-                        break;
+                
+                laserCurrCLKState = digitalRead(LASER_STEER_CLK);
+                if (laserCurrCLKState != laserLastCLKState) {
+                    if (digitalRead(LASER_STEER_DT) != laserCurrCLKState) {
+                        laserRotation += 2;
+                    }
+                    else {
+                        laserRotation -= 2;
+                    }
+                    if (laserRotation > 180) { laserRotation = 180; }
+                    if (laserRotation < 0)   { laserRotation = 0;   }
+                    laserServo.write(laserRotation);
+                }
+                Status laserStatus = Status::SUCCESS;
+                if (!isLaserDone) {
+                    laserStatus = checkLaser();
+                    switch (laserStatus) {
+                        case Status::SUCCESS:
+                            isLaserDone = true;
+                            digitalWrite(LED_SUCC_LASER, HIGH);
+                            break;
+                        default:
+                            digitalWrite(LED_SUCC_LASER, LOW);
+                            break;
+                    }
                 }
                 
+                
+                Status mazeStatus = Status::SUCCESS;
+                if (!isMazeDone) {
+                    mazeStatus = checkMaze();
+                    switch (mazeStatus) {
+                        case Status::SUCCESS:
+                            isMazeDone = true;
+                            mazeDrawEnd();
+                            digitalWrite(LED_SUCC_MAZE, HIGH);
+                            break;
+                        default: break;
+                    }
+                }
+                
+                
+                Status circlesStatus = Status::SUCCESS;
+                if (!areCirclesDone) {
+                    circlesStatus = checkCircles();
+                    switch (circlesStatus) {
+                        case Status::SUCCESS:
+                            areCirclesDone = true;
+                            digitalWrite(LED_SUCC_CIRCLES, HIGH);
+                            break;
+                        default:
+                            digitalWrite(LED_SUCC_CIRCLES, LOW);
+                            break;
+                    }
+                }
+                
+                
                 if (!hasIntervalActivated) {
-                    if (wiresStatus  == Status::SUCCESS || 
-                        melodyStatus == Status::SUCCESS ||
-                        laserStatus  == Status::SUCCESS) {
+                    if (wiresStatus   == Status::SUCCESS || 
+                        melodyStatus  == Status::SUCCESS ||
+                        laserStatus   == Status::SUCCESS ||
+                        mazeStatus    == Status::SUCCESS ||
+                        circlesStatus == Status::SUCCESS) {
                         hasIntervalActivated = true;
                     }
                 }
 
-                if (wiresStatus  == Status::SUCCESS && 
-                    melodyStatus == Status::SUCCESS &&
-                    laserStatus  == Status::SUCCESS) {
+                if (wiresStatus   == Status::SUCCESS && 
+                    melodyStatus  == Status::SUCCESS &&
+                    laserStatus   == Status::SUCCESS &&
+                    mazeStatus    == Status::SUCCESS &&
+                    circlesStatus == Status::SUCCESS) {
                     gameStatus = Status::SUCCESS; // wygrano grę
                     break;
                 }
@@ -570,12 +790,12 @@ void loop() {
             break;
         }
         case Status::SUCCESS: { // wygrano grę
-            /* @TODO ekran timera się gasi, OLED się gasi */
+            /* @TODO ekran timera się zapisuje, epapier czysci ekran i bierze napis "Bomba rozbrojona" */
             digitalWrite(LASER, LOW);
             break;
         }
         case Status::FAILURE: { // bomba wybuchła
-            /* @TODO buzzer wydaje głosy wybuchu, na OLED jest pokazany wybuch, timer pokazuje 0:00 */
+            /* @TODO buzzer wydaje głosy wybuchu, epapier sie czyści i pokazuje img wybuch, timer gasi się */
             digitalWrite(LASER, LOW);
             break;
         }
