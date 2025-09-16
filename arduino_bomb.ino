@@ -12,8 +12,8 @@
 
 
 
-#include <Servo.h>             // serwa
-#include <Wire.h>              // timer
+    #include <Servo.h>             // serwa
+    #include <Wire.h>              // timer
 #ifdef MODULE_MELODY
     #include <Keypad.h>            // Keypad by Mark Stanley v3.1.1; melody
 #endif
@@ -25,13 +25,14 @@
     #include <Adafruit_GFX.h>      // maze
     #include <SPI.h>               // maze
 #endif
-#include "pitches.h"           // buzzer
+    #include "pitches.h"           // buzzer
 #ifdef MODULE_EPAPER
     #include "boom1bit.h"          // obraz wybuchu dla e-papieru
     #include "epd4in2_V2.h"        // e-papier
     #include "imagedata.h"         // e-papier
     #include "epdpaint.h"          // e-papier
 #endif
+
 
 
 #ifdef MODULE_TIMER
@@ -65,7 +66,7 @@
     #define MELODY_BTN          13
 #endif
 // 
-#define MODULE_LASER
+#ifdef MODULE_LASER
     #define LASER_LDR           A1  /* fotorezystor do wykrywania lasera*/
     #define LASER_SERVO         16
     //#define LASER               17
@@ -167,7 +168,7 @@ byte toneIndex = 0;
 byte keyIndex = 0;
 #endif
 
-#define MODULE_LASER
+#ifdef MODULE_LASER
 const unsigned int LASER_TARGET_ACCURACY = 930;
 Servo laserServo;
 int laserRotation = 90;
@@ -199,7 +200,7 @@ bool isMazeDone = false;
 unsigned int mazeDebounceCounter = 0;
 #endif
 
-#define MODULE_CIRCLES
+#ifdef MODULE_CIRCLES
 const unsigned int CIRCLES_TARGET_ACCURACY = 50;
 int circlesHold = 0;
 bool areCirclesDone = false;
@@ -505,7 +506,7 @@ Status checkMelody() {
     return Status::NEUTRAL;
 }
 #endif
-#define MODULE_LASER
+#ifdef MODULE_LASER
 Status checkLaser() {
     unsigned int laserAccuracy = analogRead(LASER_LDR);
     if (laserAccuracy >= LASER_TARGET_ACCURACY) { // @TODO skalibrować wartość LASER_TARGET_ACCURACY
@@ -616,7 +617,7 @@ void initBomb(){
     keyIndex = 0;
     #endif
 
-    #define MODULE_LASER
+    #ifdef MODULE_LASER
     laserRotation = 90;
     laserHold     = 0;
     isLaserDone  = false;
@@ -672,7 +673,7 @@ void initBomb(){
     pinMode(MELODY_BTN, INPUT_PULLUP);
     #endif
 
-    #define MODULE_LASER
+    #ifdef MODULE_LASER
     pinMode(LASER_STEER_CLK, INPUT);
     pinMode(LASER_STEER_DT, INPUT);
     laserServo.attach(LASER_SERVO);
@@ -720,7 +721,7 @@ void initBomb(){
     #ifdef MODULE_MELODY
     generateMelodyTones();
     #endif
-    #define MODULE_LASER
+    #ifdef MODULE_LASER
     laserServo.write(0);
     #endif
     #ifdef MODULE_CIRCLES
@@ -855,7 +856,7 @@ void loop() {
                 Status melodyStatus = checkMelody();
                 #endif
                 
-                #define MODULE_LASER
+                #ifdef MODULE_LASER
                 laserCurrCLKState = digitalRead(LASER_STEER_CLK);
                 if (laserCurrCLKState != laserLastCLKState) {
                     if (digitalRead(LASER_STEER_DT) != laserCurrCLKState) {
