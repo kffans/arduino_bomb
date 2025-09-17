@@ -1,8 +1,8 @@
 #include <Adafruit_NeoPixel.h>
 
-#define LED_PIN 6       
-#define LED_COUNT 6    
-#define BUTTON_PIN 2    
+#define LED_PIN 50       
+#define LED_COUNT 8    
+#define BUTTON_PIN 42
 
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -24,7 +24,7 @@ void loop() {
   // wykrywanie zbocza (puszczenie->naciśnięcie)
   if (lastButtonState == HIGH && buttonState == LOW) {
     counter++;
-    if (counter > LED_COUNT) {
+    if (counter > 5) {
       counter = 0;
     }
 
@@ -40,23 +40,21 @@ void loop() {
 void updateLEDs() {
   strip.clear();
 
+
   if (counter == 1) {
-    strip.setPixelColor(0, strip.Color(0, 255, 0));
-  }
-  if (counter == 2) {
-    strip.setPixelColor(1, strip.Color(0, 255, 0));
-  }
-  if (counter == 3) {
-    strip.setPixelColor(2, strip.Color(0, 255, 0));
-  }
-  if (counter == 4) {
     strip.setPixelColor(3, strip.Color(0, 255, 0));
   }
-  if (counter == 5) {
+  if (counter == 2) {
     strip.setPixelColor(4, strip.Color(0, 255, 0));
   }
-  if (counter == 6) {
+  if (counter == 3) {
     strip.setPixelColor(5, strip.Color(0, 255, 0));
+  }
+  if (counter == 4) {
+    strip.setPixelColor(6, strip.Color(0, 255, 0));
+  }
+  if (counter == 5) {
+    strip.setPixelColor(7, strip.Color(0, 255, 0));
   }
 
   strip.show();
