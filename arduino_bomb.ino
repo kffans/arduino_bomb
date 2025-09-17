@@ -1,11 +1,11 @@
-#define MODULE_TIMER
-#define MODULE_INTERVAL
-#define MODULE_LED_STRIP
-#define MODULE_WIRES
+//#define MODULE_TIMER
+//#define MODULE_INTERVAL
+//#define MODULE_LED_STRIP
+//#define MODULE_WIRES
 #define MODULE_MELODY
-#define MODULE_LASER
-#define MODULE_MAZE
-#define MODULE_CIRCLES
+//#define MODULE_LASER
+//#define MODULE_MAZE
+//#define MODULE_CIRCLES
 #define MODULE_EPAPER
 
 
@@ -44,58 +44,58 @@
 
 
 #ifdef MODULE_LED_STRIP
-    #define SUCCESS_LED_STRIP_PIN   44       
+    #define SUCCESS_LED_STRIP_PIN   50      
     #define SUCCESS_LED_STRIP_COUNT 5 
 #endif
 //
-    #define BUZZER              15  /* do morsa, przy wybuchu */
+    #define BUZZER              12  /* do morsa, przy wybuchu */
 //
-    #define MORSE_BTN           14
+    #define MORSE_BTN           13
 // 
 #ifdef MODULE_INTERVAL
-    #define INTERVAL_LED        38  /* żółty led który z czasem miga coraz szybciej */
-    #define INTERVAL_BTN        39  /* przycisk do naciskania co każde 5s */
+    #define INTERVAL_LED        A4  /* żółty led który z czasem miga coraz szybciej */
+    #define INTERVAL_BTN        42  /* przycisk do naciskania co każde 5s */
 #endif
 // 
 #ifdef MODULE_WIRES
-    #define WIRES_BASE          2   /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
+    #define WIRES_BASE          37   /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
 #endif
 //
 #ifdef MODULE_MELODY 
-    #define MELODY_KEYBOARD     7   /* @NOTE rezerwuje 7, 8, 9, 10, 11, 12 */
-    #define MELODY_BTN          13
+    #define MELODY_KEYBOARD     28   /* @NOTE rezerwuje 28, 29, 30, 31, 32, 33 */
+    #define MELODY_BTN          11
 #endif
 // 
 #ifdef MODULE_LASER
-    #define LASER_LDR           A1  /* fotorezystor do wykrywania lasera*/
-    #define LASER_SERVO         16
+    #define LASER_LDR           A5  /* fotorezystor do wykrywania lasera*/
+    #define LASER_SERVO         10
     //#define LASER               17
-    #define LASER_STEER_CLK     18
-    #define LASER_STEER_DT      19
+    #define LASER_STEER_CLK     8
+    #define LASER_STEER_DT      9
 #endif
 // 
 #ifdef MODULE_MAZE
-    #define MAZE_TFT_CS         10
-    #define MAZE_TFT_RST        9
-    #define MAZE_TFT_DC         8
-    #define MAZE_JOY_X          A3
-    #define MAZE_JOY_Y          A4
+    #define MAZE_TFT_CS         6
+    #define MAZE_TFT_RST        5
+    #define MAZE_TFT_DC         4
+    #define MAZE_JOY_X          A2
+    #define MAZE_JOY_Y          A3
 #endif
 //
 #ifdef MODULE_CIRCLES
-    #define CIRCLES_LDR         A2  /* fotorezystor do wykrywania swiatla */
-    #define CIRCLES_SERVO_UP    30
-    #define CIRCLES_SERVO_LEFT  31
-    #define CIRCLES_SERVO_RIGHT 32
-    #define CIRCLES_STEER_UP_CLK    23
-    #define CIRCLES_STEER_UP_DT     24
+    #define CIRCLES_LDR         A6  /* fotorezystor do wykrywania swiatla */
+    #define CIRCLES_SERVO_UP    43
+    #define CIRCLES_SERVO_LEFT  44
+    #define CIRCLES_SERVO_RIGHT 45
+    #define CIRCLES_STEER_UP_CLK    2
+    #define CIRCLES_STEER_UP_DT     3
     //#define CIRCLES_STEER_UP_SW     1
-    #define CIRCLES_STEER_LEFT_CLK  25
+    #define CIRCLES_STEER_LEFT_CLK  24
     #define CIRCLES_STEER_LEFT_DT   26
     //#define CIRCLES_STEER_LEFT_SW   1
-    #define CIRCLES_STEER_RIGHT_CLK 27
-    #define CIRCLES_STEER_RIGHT_DT  28
-    #define CIRCLES_STEER_RIGHT_SW  29
+    #define CIRCLES_STEER_RIGHT_CLK 22
+    #define CIRCLES_STEER_RIGHT_DT  23
+    #define CIRCLES_STEER_RIGHT_SW  25
 #endif
 //
 // @NOTE piny do e-papieru są zdefinioweane w pliku epdif.h, jest ich cztery
@@ -225,7 +225,7 @@ unsigned int rememberedTime = millis();
 void timerShowDigits(int d1, int d2, int d3, int d4) {
     Wire.beginTransmission(TIMER_ADDR);
     Wire.write(TIMER_DISPLAY);
-    Wire.write(digitTo7Seg(d1)); Wire.write(digitTo7Seg(d2)); Wire.write(digitTo7Seg(1)); Wire.write(digitTo7Seg(d3)); Wire.write(digitTo7Seg(d4));
+    Wire.write(digitTo7Seg(10)); Wire.write(digitTo7Seg(d2)); Wire.write(digitTo7Seg(1)); Wire.write(digitTo7Seg(d3)); Wire.write(digitTo7Seg(d4));
     Wire.endTransmission();
 }
 void timerSetBrightness(int level) {
@@ -278,16 +278,18 @@ void mazeDrawEnd(){
 String generateID(){ // examples of ID: A23C1, H5833, J11GU. Two last characters are from morse code, 1st char is always a letter, 2nd and 3rd are always digits
     String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     String digits = "0123456789";
-    unsigned int lettersLength = letters.length();
-    unsigned int digitsLength = digits.length();
-    ID += letters[random(lettersLength)];
-    ID += digits[random(digitsLength)];
-    ID += digits[random(digitsLength)];
+    unsigned int lettersLength = 26;
+    unsigned int digitsLength = 10;
+    ID = "";
+    ID.concat(letters.charAt(random(lettersLength)));
+    ID.concat(digits.charAt(random(digitsLength)));
+    ID.concat(digits.charAt(random(digitsLength)));
     for (byte i = 0; i < ID_MORSE_CODE_CHAR_COUNT; i++) {
         int putDigit = random(2); // losuje 0 albo 1
-        if (putDigit) { ID += digits[random(digitsLength)];   }
-        else          { ID += letters[random(lettersLength)]; }
+        if (putDigit) { ID.concat(digits.charAt(random(digitsLength)));   }
+        else          { ID.concat(letters.charAt(random(lettersLength))); }
     }
+	return ID;
 }
 void generateMorseCode() { // converts last two characters from ID to dots and dashes ("0" is dot, "1" is dash, "2" is space/end); example: "AB" -> "._ _... " -> "01210002"
     if (ID.length() != ID_CHAR_COUNT ) { return; }
@@ -650,7 +652,7 @@ void initBomb(){
     #ifdef MODULE_TIMER
     // timer
     Wire.begin();
-    timerSetBrightness(7);
+    timerSetBrightness(4);
     #endif
     
     pinMode(BUZZER, OUTPUT);
@@ -738,9 +740,10 @@ void initBomb(){
     unsigned char image[1500];
     Paint paint(image, 400, 28);
     paint.Clear(UNCOLORED);
-    paint.DrawStringAt(140, 5, "ID: " + ID[0] + ID[1] + ID[2], &Font24, COLORED); // wyświetlanie ID
+	String partialID = "ID:" + ID.substring(0, 3);
+    paint.DrawStringAt(140, 5, partialID.c_str(), &Font24, COLORED); // wyświetlanie ID   + ID[0] + ID[1] + ID[2]
     epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
-    delay(10000);
+    delay(1000);
     epd.Sleep();
     #endif
 }
@@ -939,19 +942,19 @@ void loop() {
                 #ifdef MODULE_LED_STRIP
                     strip.clear();
                     #ifdef MODULE_WIRES
-                    if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(0, strip.Color(0, 255, 0)); }
+                    if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
                     #endif
                     #ifdef MODULE_MELODY
-                    if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(1, strip.Color(0, 255, 0)); }
+                    if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
                     #endif
                     #ifdef MODULE_LASER
-                    if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(2, strip.Color(0, 255, 0)); }
+                    if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(5, strip.Color(0, 255, 0)); }
                     #endif
                     #ifdef MODULE_MAZE
-                    if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
+                    if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(6, strip.Color(0, 255, 0)); }
                     #endif
                     #ifdef MODULE_CIRCLES
-                    if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
+                    if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(7, strip.Color(0, 255, 0)); }
                     #endif
                     strip.show();
                 #endif
@@ -992,7 +995,7 @@ void loop() {
             unsigned char image[1500];
             Paint paint(image, 400, 28);
             paint.Clear(UNCOLORED);
-            paint.DrawStringAt(50, 5, "Bomba rozbrojona", &Font24, COLORED);
+            paint.DrawStringAt(50, 5, "Bomba rozbrojona"/*partialID.c_str()*/, &Font24, COLORED); // wyświetlanie ID   + ID[0] + ID[1] + ID[2]
             epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
             delay(1000);
             epd.Sleep();
