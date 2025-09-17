@@ -44,58 +44,58 @@
 
 
 #ifdef MODULE_LED_STRIP
-    #define SUCCESS_LED_STRIP_PIN   44       
+    #define SUCCESS_LED_STRIP_PIN   50      
     #define SUCCESS_LED_STRIP_COUNT 5 
 #endif
 //
-    #define BUZZER              15  /* do morsa, przy wybuchu */
+    #define BUZZER              12  /* do morsa, przy wybuchu */
 //
-    #define MORSE_BTN           14
+    #define MORSE_BTN           13
 // 
 #ifdef MODULE_INTERVAL
-    #define INTERVAL_LED        38  /* żółty led który z czasem miga coraz szybciej */
-    #define INTERVAL_BTN        39  /* przycisk do naciskania co każde 5s */
+    #define INTERVAL_LED        A4  /* żółty led który z czasem miga coraz szybciej */
+    #define INTERVAL_BTN        42  /* przycisk do naciskania co każde 5s */
 #endif
 // 
 #ifdef MODULE_WIRES
-    #define WIRES_BASE          2   /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
+    #define WIRES_BASE          37   /* @NOTE to kabelek bazowy (pierwszy); kabelki muszą być podłączone obok siebie w rosnącej kolejności (jeżeli pierwszy kabelek jest na pinie 20, drugi musi być na 21, itd.) */
 #endif
 //
 #ifdef MODULE_MELODY 
-    #define MELODY_KEYBOARD     7   /* @NOTE rezerwuje 7, 8, 9, 10, 11, 12 */
-    #define MELODY_BTN          13
+    #define MELODY_KEYBOARD     28   /* @NOTE rezerwuje 28, 29, 30, 31, 32, 33 */
+    #define MELODY_BTN          11
 #endif
 // 
 #ifdef MODULE_LASER
-    #define LASER_LDR           A1  /* fotorezystor do wykrywania lasera*/
-    #define LASER_SERVO         16
+    #define LASER_LDR           A5  /* fotorezystor do wykrywania lasera*/
+    #define LASER_SERVO         10
     //#define LASER               17
-    #define LASER_STEER_CLK     18
-    #define LASER_STEER_DT      19
+    #define LASER_STEER_CLK     8
+    #define LASER_STEER_DT      9
 #endif
 // 
 #ifdef MODULE_MAZE
-    #define MAZE_TFT_CS         10
-    #define MAZE_TFT_RST        9
-    #define MAZE_TFT_DC         8
-    #define MAZE_JOY_X          A3
-    #define MAZE_JOY_Y          A4
+    #define MAZE_TFT_CS         6
+    #define MAZE_TFT_RST        5
+    #define MAZE_TFT_DC         4
+    #define MAZE_JOY_X          A2
+    #define MAZE_JOY_Y          A3
 #endif
 //
 #ifdef MODULE_CIRCLES
-    #define CIRCLES_LDR         A2  /* fotorezystor do wykrywania swiatla */
-    #define CIRCLES_SERVO_UP    30
-    #define CIRCLES_SERVO_LEFT  31
-    #define CIRCLES_SERVO_RIGHT 32
-    #define CIRCLES_STEER_UP_CLK    23
-    #define CIRCLES_STEER_UP_DT     24
+    #define CIRCLES_LDR         A6  /* fotorezystor do wykrywania swiatla */
+    #define CIRCLES_SERVO_UP    43
+    #define CIRCLES_SERVO_LEFT  44
+    #define CIRCLES_SERVO_RIGHT 45
+    #define CIRCLES_STEER_UP_CLK    2
+    #define CIRCLES_STEER_UP_DT     3
     //#define CIRCLES_STEER_UP_SW     1
-    #define CIRCLES_STEER_LEFT_CLK  25
+    #define CIRCLES_STEER_LEFT_CLK  24
     #define CIRCLES_STEER_LEFT_DT   26
     //#define CIRCLES_STEER_LEFT_SW   1
-    #define CIRCLES_STEER_RIGHT_CLK 27
-    #define CIRCLES_STEER_RIGHT_DT  28
-    #define CIRCLES_STEER_RIGHT_SW  29
+    #define CIRCLES_STEER_RIGHT_CLK 22
+    #define CIRCLES_STEER_RIGHT_DT  23
+    #define CIRCLES_STEER_RIGHT_SW  25
 #endif
 //
 // @NOTE piny do e-papieru są zdefinioweane w pliku epdif.h, jest ich cztery
