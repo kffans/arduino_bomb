@@ -2,11 +2,11 @@
 #define MODULE_INTERVAL
 #define MODULE_LED_STRIP
 #define MODULE_WIRES
-//#define MODULE_MELODY
-//#define MODULE_LASER
-//#define MODULE_MAZE
-//#define MODULE_CIRCLES
-//#define MODULE_EPAPER
+#define MODULE_MELODY
+#define MODULE_LASER
+#define MODULE_MAZE
+#define MODULE_CIRCLES
+#define MODULE_EPAPER
 
 
 
@@ -18,7 +18,8 @@
     #include <Keypad.h>            // Keypad by Mark Stanley v3.1.1; melody
 #endif
 #ifdef MODULE_LED_STRIP
-    #include <Adafruit_NeoPixel.h> // pasek ledów
+    //#include <Adafruit_NeoPixel.h> // pasek ledów
+    #include <FastLED.h>
 #endif
 #ifdef MODULE_MAZE
     #include <Adafruit_ST7735.h>   // maze
@@ -100,7 +101,9 @@
 #ifdef MODULE_EPAPER
     #define COLORED     0
     #define UNCOLORED   1
+    #define EPAPER_CS   49
 #endif
+
 
 enum class Status {NONE, NEUTRAL, SUCCESS, FAILURE};
 enum class Buzzer {SILENT, MORSE, MELODY, KEYBOARD};
@@ -110,7 +113,9 @@ enum class Buzzer {SILENT, MORSE, MELODY, KEYBOARD};
 // GLOBAL VARS
 // @TODO zmienne globalne tutaj
 #ifdef MODULE_LED_STRIP
-Adafruit_NeoPixel strip(SUCCESS_LED_STRIP_COUNT, SUCCESS_LED_STRIP_PIN, NEO_GRB + NEO_KHZ800); // LED strip
+CRGB leds[8];
+
+//Adafruit_NeoPixel strip(SUCCESS_LED_STRIP_COUNT, SUCCESS_LED_STRIP_PIN, NEO_GRB + NEO_KHZ800); // LED strip
 #endif
 
 int resetTimer = 0;
@@ -130,8 +135,8 @@ byte morseCodeLetterIndex   = 0;
 bool isMorsePaused = false;
 
 #ifdef MODULE_INTERVAL
-const unsigned int INTERVAL_TOTAL_ACTIVATION_TIME = 6000;
-const unsigned int INTERVAL_TOTAL_EXPLOSION_TIME  = 6000;
+const unsigned int INTERVAL_TOTAL_ACTIVATION_TIME = 8000;
+const unsigned int INTERVAL_TOTAL_EXPLOSION_TIME  = 4000;
 unsigned int intervalActivationTime = 0;
 unsigned int intervalExplosionTime  = 0;
 bool hasIntervalActivated = false;
@@ -151,8 +156,8 @@ const byte MELODY_KEYPAD_COLS = 3;
 const unsigned int MELODY_KEY_TIME     = 500;
 const unsigned int MELODY_KEY_BREAK    = 500;
 const unsigned int MELODY_WAITING_TIME = 5000;
-byte rowPins[MELODY_KEYPAD_ROWS] = { MELODY_KEYBOARD,     MELODY_KEYBOARD + 1, MELODY_KEYBOARD + 2 }; // Piny wierszy
-byte colPins[MELODY_KEYPAD_COLS] = { MELODY_KEYBOARD + 3, MELODY_KEYBOARD + 4, MELODY_KEYBOARD + 5 }; // Piny kolumn
+byte rowPins[MELODY_KEYPAD_ROWS] = { MELODY_KEYBOARD + 3,     MELODY_KEYBOARD + 4, MELODY_KEYBOARD + 5 }; // Piny wierszy
+byte colPins[MELODY_KEYPAD_COLS] = { MELODY_KEYBOARD + 0, MELODY_KEYBOARD + 1, MELODY_KEYBOARD + 2 }; // Piny kolumn
 char keymap[MELODY_KEYPAD_ROWS][MELODY_KEYPAD_COLS] = { { '1', '2', '3' }, { '4', '5', '6' }, { '7', '8', '9' } }; 
 Keypad keypad = Keypad(makeKeymap(keymap), rowPins, colPins, MELODY_KEYPAD_ROWS, MELODY_KEYPAD_COLS); //inicjalizacja klawiatury
 const int keyboardTones[MELODY_KEYPAD_ROWS * MELODY_KEYPAD_COLS] = {NOTE_C1, NOTE_CS4, NOTE_D4, NOTE_DS5, NOTE_E5, NOTE_F6, NOTE_FS6, NOTE_G7, NOTE_GS7}; 
@@ -226,7 +231,7 @@ int circlesRightDirection = 1; // 1 = prawo, -1 = lewo (program 3)
 int circlesRightLastCLK = HIGH;
 #endif
 
-const unsigned long TIME_TOTAL_MS = 120000; // 2 minuty = 120000ms
+const unsigned long TIME_TOTAL_MS = 180000; // 3 minuty = 180000ms
 const unsigned long TIME_DELAY_DURATION_MS = 1;
 unsigned long TIME_MS = 0;
 unsigned long currentTime = 0;
@@ -364,7 +369,7 @@ void generateMorseCode() { // converts last two characters from ID to dots and d
 #ifdef MODULE_WIRES
 void generateWiresMask(){
     for (byte i = 0; i < WIRES_COUNT; i++) {
-        wiresMask[i] == false;
+        wiresMask[i] = false;
     }
 
     byte digitCount = 0;
@@ -429,7 +434,7 @@ void generateMelodyTones(){
     unsigned int keyboardTonesLength = MELODY_KEYPAD_ROWS * MELODY_KEYPAD_COLS;
     for (byte i = 0; i < MELODY_TONES_COUNT; i++){
         unsigned int index = random(keyboardTonesLength);
-        melodyKeys[i] = index + 48;
+        melodyKeys[i] = index + 49;
         melodyTones[i] = keyboardTones[index];
     }
 }
@@ -464,6 +469,7 @@ void playMorse() {
 }
 #ifdef MODULE_MELODY
 void playMelody() {
+    keyIndex = 0;
     unsigned int difference = currentTime - rememberedTime;
     if (!isMelodyPaused) { //kiedy 0 gra dzwiek
         tone(BUZZER, melodyTones[toneIndex]);
@@ -686,7 +692,7 @@ Status checkCircles() {
     unsigned int circlesAccuracy = analogRead(CIRCLES_LDR);
     if (circlesAccuracy >= CIRCLES_TARGET_ACCURACY) { // @TODO skalibrować wartość CIRCLES_TARGET_ACCURACY
         circlesHold++;
-        if (circlesHold >= 500) { // 63 * 16ms > 1000ms
+        if (circlesHold >= 300) { // 63 * 16ms > 1000ms
             return Status::SUCCESS;
         }
     }
@@ -789,6 +795,17 @@ void initBomb(){
     pinMode(BUZZER, OUTPUT);
     
     pinMode(MORSE_BTN, INPUT_PULLUP);
+
+    #ifdef MODULE_LED_STRIP
+    //strip.begin();
+	//strip.clear();
+    FastLED.addLeds<WS2812B, SUCCESS_LED_STRIP_PIN, GRB>(leds, SUCCESS_LED_STRIP_COUNT).setCorrection(TypicalLEDStrip);
+    FastLED.setBrightness(50);
+    fill_solid(leds, SUCCESS_LED_STRIP_COUNT, CRGB::Black);
+    SPCR &= ~_BV(SPE); // @NOTE wyłączanie SPI na chwilę, ze względu na interferencje przerwań SPI na Neopixel
+    FastLED.show();
+    SPCR |= _BV(SPE);
+    #endif
     
     #ifdef MODULE_INTERVAL
     pinMode(INTERVAL_LED, OUTPUT);
@@ -815,8 +832,13 @@ void initBomb(){
     #endif
 
     #ifdef MODULE_MAZE
+        #ifdef MODULE_EPAPER
+        digitalWrite(EPAPER_CS, LOW);
+        #endif
+        digitalWrite(MAZE_TFT_CS, HIGH);
     mazeTFT.initR(INITR_BLACKTAB); 
     mazeTFT.fillScreen(ST7735_BLACK);
+    delay(1500);
     #endif
     
     #ifdef MODULE_CIRCLES
@@ -845,11 +867,6 @@ void initBomb(){
 	circlesRightLastCLK = digitalRead(CIRCLES_STEER_RIGHT_CLK);
     #endif
 
-    #ifdef MODULE_LED_STRIP
-    strip.begin();
-	strip.clear();
-    #endif
-
     //digitalWrite(LASER,           HIGH);
 
     // generowanie rozgrywki
@@ -872,6 +889,10 @@ void initBomb(){
     #endif
 
     #ifdef MODULE_EPAPER
+        #ifdef MODULE_MAZE
+        digitalWrite(MAZE_TFT_CS, LOW);
+        #endif
+        digitalWrite(EPAPER_CS, HIGH);
     Epd epd;
     epd.Init();
     epd.Clear();
@@ -881,17 +902,23 @@ void initBomb(){
 	String partialID = "ID:" + ID.substring(0, 3);
     paint.DrawStringAt(140, 5, partialID.c_str(), &Font24, COLORED); // wyświetlanie ID   + ID[0] + ID[1] + ID[2]
     epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
+    //epd.Display(paint.GetImage());
     delay(1000);
     epd.Sleep();
+        digitalWrite(EPAPER_CS, LOW);
+        #ifdef MODULE_MAZE
+        digitalWrite(MAZE_TFT_CS, HIGH);
+        #endif
     #endif
 
     #ifdef MODULE_CIRCLES
-    delay(1000);
+    delay(500);
     circlesServoUp.writeMicroseconds(1500);
     circlesServoLeft.writeMicroseconds(1500);
     circlesServoRight.writeMicroseconds(1500);
     #endif
-    delay(2000);
+    delay(1000);
+    Serial.println(wiresCutCount);
 }
 
 void setup(){
@@ -914,9 +941,9 @@ void loop() {
         }
     }
     #endif
-    strip.setPixelColor(4, strip.Color(255, 0, 0));
-    strip.setPixelColor(7, strip.Color(255, 0, 0));
-    strip.show();
+    //strip.setPixelColor(4, strip.Color(255, 0, 0));
+    //strip.setPixelColor(7, strip.Color(255, 0, 0));
+    //strip.show();
     currentTime = millis();
 
     switch (gameStatus) {
@@ -1025,19 +1052,7 @@ void loop() {
 			}
 			#endif
 			
-			#ifdef MODULE_MAZE
-			mazeStatus = Status::SUCCESS;
-			if (!isMazeDone) {
-				mazeStatus = checkMaze();
-				switch (mazeStatus) {
-					case Status::SUCCESS:
-						isMazeDone = true;
-						mazeDrawEnd();
-						break;
-					default: break;
-				}
-			}
-			#endif
+			
 			
 			#ifdef MODULE_CIRCLES
 			circlesStatus = Status::SUCCESS;
@@ -1059,6 +1074,20 @@ void loop() {
 			
 			
 			
+            #ifdef MODULE_MAZE
+            mazeStatus = Status::SUCCESS;
+            if (!isMazeDone) {
+                mazeStatus = checkMaze();
+                switch (mazeStatus) {
+                    case Status::SUCCESS:
+                        isMazeDone = true;
+                        mazeDrawEnd();
+                        break;
+                    default: break;
+                }
+            }
+            #endif
+            
 
             if (TIME_MS % 1000 == 0) { // wykonuje tu co każdą sekundę
                 #ifdef MODULE_TIMER
@@ -1119,21 +1148,26 @@ void loop() {
 				//strip.clear();
 				//strip.setBrightness(50);
 				#ifdef MODULE_WIRES
-				if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
+				if (wiresStatus   == Status::SUCCESS) { leds[3] = CRGB::Green; /*strip.setPixelColor(3, strip.Color(0, 255, 0));*/ }
 				#endif
 				#ifdef MODULE_MELODY
-				if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
+				if (melodyStatus  == Status::SUCCESS) { leds[4] = CRGB::Green; /*strip.setPixelColor(4, strip.Color(0, 255, 0));*/ }
 				#endif
 				#ifdef MODULE_LASER
-				if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(5, strip.Color(0, 255, 0)); }
+				if (laserStatus   == Status::SUCCESS) { leds[5] = CRGB::Green; /*strip.setPixelColor(5, strip.Color(0, 255, 0));*/ }
 				#endif
 				#ifdef MODULE_MAZE
-				if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(6, strip.Color(0, 255, 0)); }
+				if (mazeStatus    == Status::SUCCESS) { leds[6] = CRGB::Green; /*strip.setPixelColor(6, strip.Color(0, 255, 0));*/ }
 				#endif
 				#ifdef MODULE_CIRCLES
-				if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(7, strip.Color(0, 255, 0)); }
+				if (circlesStatus == Status::SUCCESS) { leds[7] = CRGB::Green; /*strip.setPixelColor(7, strip.Color(0, 255, 0));*/ }
 				#endif
-				strip.show();
+				//strip.show();
+                //noInterrupts();
+                SPCR &= ~_BV(SPE);
+                FastLED.show();
+                SPCR |= _BV(SPE);
+                //interrupts();
 				#endif
 				
                 if (true &&
@@ -1171,6 +1205,10 @@ void loop() {
         }
         case Status::SUCCESS: { // wygrano grę
             #ifdef MODULE_EPAPER
+                #ifdef MODULE_MAZE
+                digitalWrite(MAZE_TFT_CS, LOW);
+                #endif
+                digitalWrite(EPAPER_CS, HIGH);
             Epd epd;
             epd.Init();
             epd.Clear();
@@ -1188,7 +1226,20 @@ void loop() {
         }
         case Status::FAILURE: { // bomba wybuchła
             /* @TODO buzzer wydaje głosy wybuchu, timer gasi się */
+            #ifdef MODULE_TIMER
+            Wire.beginTransmission(TIMER_ADDR);
+            Wire.write(TIMER_DISPLAY);
+            Wire.write(digitTo7Seg(10)); Wire.write(digitTo7Seg(10)); Wire.write(digitTo7Seg(10)); Wire.write(digitTo7Seg(10)); Wire.write(digitTo7Seg(10));
+            Wire.endTransmission();
+            #endif
+
             #ifdef MODULE_EPAPER
+
+                #ifdef MODULE_MAZE
+                digitalWrite(MAZE_TFT_CS, LOW);
+                #endif
+                digitalWrite(EPAPER_CS, HIGH);
+
             Epd epd;
             epd.Init();
             epd.Display(epd_bitmap_boom1bit);
