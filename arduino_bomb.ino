@@ -1,12 +1,12 @@
-//#define MODULE_TIMER
+#define MODULE_TIMER
 #define MODULE_INTERVAL
 #define MODULE_LED_STRIP
 #define MODULE_WIRES
-#define MODULE_MELODY
+//#define MODULE_MELODY
 //#define MODULE_LASER
 //#define MODULE_MAZE
 //#define MODULE_CIRCLES
-#define MODULE_EPAPER
+//#define MODULE_EPAPER
 
 
 
@@ -553,7 +553,6 @@ Status checkLaser() {
     unsigned int laserAccuracy = analogRead(LASER_LDR);
     if (laserAccuracy >= LASER_TARGET_ACCURACY) {
         laserHold++;
-        Serial.println(laserHold);
         if (laserHold >= 300) { // 63 * 16ms > 1000ms
             return Status::SUCCESS;
         }
@@ -848,8 +847,7 @@ void initBomb(){
 
     #ifdef MODULE_LED_STRIP
     strip.begin();
-	//strip.clear();
-    strip.show();
+	strip.clear();
     #endif
 
     //digitalWrite(LASER,           HIGH);
@@ -916,7 +914,9 @@ void loop() {
         }
     }
     #endif
-    
+    strip.setPixelColor(4, strip.Color(255, 0, 0));
+    strip.setPixelColor(7, strip.Color(255, 0, 0));
+    strip.show();
     currentTime = millis();
 
     switch (gameStatus) {
@@ -991,6 +991,10 @@ void loop() {
 			
 			
 			
+
+            #ifdef MODULE_MELODY
+            melodyStatus = checkMelody();
+            #endif
 			
 			#ifdef MODULE_LASER
 			laserCurrCLKState = digitalRead(LASER_STEER_CLK);
@@ -1111,31 +1115,27 @@ void loop() {
                 }
                 #endif
 				
-				#ifdef MODULE_MELODY
-                melodyStatus = checkMelody();
-                #endif
-				
 				#ifdef MODULE_LED_STRIP
-                    strip.clear();
-                    strip.setBrightness(50);
-                    #ifdef MODULE_WIRES
-                    if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
-                    #endif
-                    #ifdef MODULE_MELODY
-                    if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
-                    #endif
-                    #ifdef MODULE_LASER
-                    if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(5, strip.Color(0, 255, 0)); }
-                    #endif
-                    #ifdef MODULE_MAZE
-                    if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(6, strip.Color(0, 255, 0)); }
-                    #endif
-                    #ifdef MODULE_CIRCLES
-                    if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(7, strip.Color(0, 255, 0)); }
-                    #endif
-                    strip.show();
-                #endif
-
+				//strip.clear();
+				//strip.setBrightness(50);
+				#ifdef MODULE_WIRES
+				if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
+				#endif
+				#ifdef MODULE_MELODY
+				if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
+				#endif
+				#ifdef MODULE_LASER
+				if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(5, strip.Color(0, 255, 0)); }
+				#endif
+				#ifdef MODULE_MAZE
+				if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(6, strip.Color(0, 255, 0)); }
+				#endif
+				#ifdef MODULE_CIRCLES
+				if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(7, strip.Color(0, 255, 0)); }
+				#endif
+				strip.show();
+				#endif
+				
                 if (true &&
                     #ifdef MODULE_WIRES
                     wiresStatus   == Status::SUCCESS && 
@@ -1157,6 +1157,9 @@ void loop() {
                     break;
                 }
             }
+
+
+
 			
 			
             delay(TIME_DELAY_DURATION_MS);
