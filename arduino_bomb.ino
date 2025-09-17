@@ -1,11 +1,11 @@
-#define MODULE_TIMER
-#define MODULE_INTERVAL
-#define MODULE_LED_STRIP
-#define MODULE_WIRES
+//#define MODULE_TIMER
+//#define MODULE_INTERVAL
+//#define MODULE_LED_STRIP
+//#define MODULE_WIRES
 #define MODULE_MELODY
-#define MODULE_LASER
-#define MODULE_MAZE
-#define MODULE_CIRCLES
+//#define MODULE_LASER
+//#define MODULE_MAZE
+//#define MODULE_CIRCLES
 #define MODULE_EPAPER
 
 
@@ -225,7 +225,7 @@ unsigned int rememberedTime = millis();
 void timerShowDigits(int d1, int d2, int d3, int d4) {
     Wire.beginTransmission(TIMER_ADDR);
     Wire.write(TIMER_DISPLAY);
-    Wire.write(digitTo7Seg(d1)); Wire.write(digitTo7Seg(d2)); Wire.write(digitTo7Seg(1)); Wire.write(digitTo7Seg(d3)); Wire.write(digitTo7Seg(d4));
+    Wire.write(digitTo7Seg(10)); Wire.write(digitTo7Seg(d2)); Wire.write(digitTo7Seg(1)); Wire.write(digitTo7Seg(d3)); Wire.write(digitTo7Seg(d4));
     Wire.endTransmission();
 }
 void timerSetBrightness(int level) {
@@ -278,16 +278,18 @@ void mazeDrawEnd(){
 String generateID(){ // examples of ID: A23C1, H5833, J11GU. Two last characters are from morse code, 1st char is always a letter, 2nd and 3rd are always digits
     String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     String digits = "0123456789";
-    unsigned int lettersLength = letters.length();
-    unsigned int digitsLength = digits.length();
-    ID += letters[random(lettersLength)];
-    ID += digits[random(digitsLength)];
-    ID += digits[random(digitsLength)];
+    unsigned int lettersLength = 26;
+    unsigned int digitsLength = 10;
+    ID = "";
+    ID.concat(letters.charAt(random(lettersLength)));
+    ID.concat(digits.charAt(random(digitsLength)));
+    ID.concat(digits.charAt(random(digitsLength)));
     for (byte i = 0; i < ID_MORSE_CODE_CHAR_COUNT; i++) {
         int putDigit = random(2); // losuje 0 albo 1
-        if (putDigit) { ID += digits[random(digitsLength)];   }
-        else          { ID += letters[random(lettersLength)]; }
+        if (putDigit) { ID.concat(digits.charAt(random(digitsLength)));   }
+        else          { ID.concat(letters.charAt(random(lettersLength))); }
     }
+	return ID;
 }
 void generateMorseCode() { // converts last two characters from ID to dots and dashes ("0" is dot, "1" is dash, "2" is space/end); example: "AB" -> "._ _... " -> "01210002"
     if (ID.length() != ID_CHAR_COUNT ) { return; }
@@ -650,7 +652,7 @@ void initBomb(){
     #ifdef MODULE_TIMER
     // timer
     Wire.begin();
-    timerSetBrightness(7);
+    timerSetBrightness(4);
     #endif
     
     pinMode(BUZZER, OUTPUT);
@@ -738,9 +740,10 @@ void initBomb(){
     unsigned char image[1500];
     Paint paint(image, 400, 28);
     paint.Clear(UNCOLORED);
-    paint.DrawStringAt(140, 5, "ID: " + ID[0] + ID[1] + ID[2], &Font24, COLORED); // wyświetlanie ID
-    epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
-    delay(10000);
+	String partialID = "ID:" + ID.substring(0, 3);
+    paint.DrawStringAt(0, 5, partialID.c_str(), &Font24, COLORED); // wyświetlanie ID   + ID[0] + ID[1] + ID[2]
+    epd.Display_Partial(paint.GetImage(), 0, 0, 0 + paint.GetWidth(), 0 + paint.GetHeight());
+    delay(1000);
     epd.Sleep();
     #endif
 }
