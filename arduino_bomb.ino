@@ -741,8 +741,8 @@ void initBomb(){
     Paint paint(image, 400, 28);
     paint.Clear(UNCOLORED);
 	String partialID = "ID:" + ID.substring(0, 3);
-    paint.DrawStringAt(0, 5, partialID.c_str(), &Font24, COLORED); // wyświetlanie ID   + ID[0] + ID[1] + ID[2]
-    epd.Display_Partial(paint.GetImage(), 0, 0, 0 + paint.GetWidth(), 0 + paint.GetHeight());
+    paint.DrawStringAt(140, 5, partialID.c_str(), &Font24, COLORED); // wyświetlanie ID   + ID[0] + ID[1] + ID[2]
+    epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
     delay(1000);
     epd.Sleep();
     #endif
@@ -942,19 +942,19 @@ void loop() {
                 #ifdef MODULE_LED_STRIP
                     strip.clear();
                     #ifdef MODULE_WIRES
-                    if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(0, strip.Color(0, 255, 0)); }
+                    if (wiresStatus   == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
                     #endif
                     #ifdef MODULE_MELODY
-                    if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(1, strip.Color(0, 255, 0)); }
+                    if (melodyStatus  == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
                     #endif
                     #ifdef MODULE_LASER
-                    if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(2, strip.Color(0, 255, 0)); }
+                    if (laserStatus   == Status::SUCCESS) { strip.setPixelColor(5, strip.Color(0, 255, 0)); }
                     #endif
                     #ifdef MODULE_MAZE
-                    if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(3, strip.Color(0, 255, 0)); }
+                    if (mazeStatus    == Status::SUCCESS) { strip.setPixelColor(6, strip.Color(0, 255, 0)); }
                     #endif
                     #ifdef MODULE_CIRCLES
-                    if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(4, strip.Color(0, 255, 0)); }
+                    if (circlesStatus == Status::SUCCESS) { strip.setPixelColor(7, strip.Color(0, 255, 0)); }
                     #endif
                     strip.show();
                 #endif
@@ -995,7 +995,7 @@ void loop() {
             unsigned char image[1500];
             Paint paint(image, 400, 28);
             paint.Clear(UNCOLORED);
-            paint.DrawStringAt(50, 5, "Bomba rozbrojona", &Font24, COLORED);
+            paint.DrawStringAt(50, 5, "Bomba rozbrojona"/*partialID.c_str()*/, &Font24, COLORED); // wyświetlanie ID   + ID[0] + ID[1] + ID[2]
             epd.Display_Partial(paint.GetImage(), 0, 130, 0 + paint.GetWidth(), 130 + paint.GetHeight());
             delay(1000);
             epd.Sleep();
