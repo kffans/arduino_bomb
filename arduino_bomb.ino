@@ -1,11 +1,11 @@
 //#define MODULE_TIMER
-//#define MODULE_INTERVAL
+#define MODULE_INTERVAL
 //#define MODULE_LED_STRIP
 //#define MODULE_WIRES
 #define MODULE_MELODY
-//#define MODULE_LASER
+#define MODULE_LASER
 //#define MODULE_MAZE
-#define MODULE_CIRCLES
+//#define MODULE_CIRCLES
 #define MODULE_EPAPER
 
 
@@ -83,19 +83,17 @@
 #endif
 //
 #ifdef MODULE_CIRCLES
-    #define CIRCLES_LDR         A6  /* fotorezystor do wykrywania swiatla */
-    #define CIRCLES_SERVO_UP    43
-    #define CIRCLES_SERVO_LEFT  44
-    #define CIRCLES_SERVO_RIGHT 45
-    #define CIRCLES_STEER_UP_CLK    2
-    #define CIRCLES_STEER_UP_DT     3
-    //#define CIRCLES_STEER_UP_SW     1
-    #define CIRCLES_STEER_LEFT_CLK  24
-    #define CIRCLES_STEER_LEFT_DT   26
-    //#define CIRCLES_STEER_LEFT_SW   1
-    #define CIRCLES_STEER_RIGHT_CLK 22
-    #define CIRCLES_STEER_RIGHT_DT  23
-    #define CIRCLES_STEER_RIGHT_SW  25
+    #define CIRCLES_LDR             A6  /* fotorezystor do wykrywania swiatla */
+	#define CIRCLES_SERVO_UP        43  // Servo1 (program 1)
+	#define CIRCLES_STEER_UP_CLK    24  // Enkoder1A (program 1)
+	#define CIRCLES_STEER_UP_DT     26  // Enkoder1B (program 1)
+	#define CIRCLES_SERVO_LEFT      45     // (program 2)
+	#define CIRCLES_STEER_LEFT_CLK  2   // (program 2)
+	#define CIRCLES_STEER_LEFT_DT   3    // (program 2)
+	#define CIRCLES_SERVO_RIGHT     44
+	#define CIRCLES_STEER_RIGHT_CLK 22   // kanał A (CLK) (program 3)
+	#define CIRCLES_STEER_RIGHT_DT  23    // kanał B (DT) (program 3)
+	#define CIRCLES_STEER_RIGHT_SW  25
 #endif
 //
 // @NOTE piny do e-papieru są zdefinioweane w pliku epdif.h, jest ich cztery
@@ -132,8 +130,8 @@ byte morseCodeLetterIndex   = 0;
 bool isMorsePaused = false;
 
 #ifdef MODULE_INTERVAL
-const unsigned int INTERVAL_TOTAL_ACTIVATION_TIME = 5000;
-const unsigned int INTERVAL_TOTAL_EXPLOSION_TIME  = 5000;
+const unsigned int INTERVAL_TOTAL_ACTIVATION_TIME = 6000;
+const unsigned int INTERVAL_TOTAL_EXPLOSION_TIME  = 6000;
 unsigned int intervalActivationTime = 0;
 unsigned int intervalExplosionTime  = 0;
 bool hasIntervalActivated = false;
@@ -752,8 +750,19 @@ void initBomb(){
     #ifdef MODULE_CIRCLES
     circlesHold = 0;
     areCirclesDone = false;
-    circlesRotationUp = 0; circlesRotationLeft = 0; circlesRotationRight = 0;
-    circlesUpLastCLK = 0; circlesLeftLastCLK = 0; circlesRightLastCLK = 0;
+    circlesProg3DebounceCounter = 0;
+    // CIRCLES PROG 1
+    int circlesUpLastCLK;
+    // CIRCLES PROG 2
+    circlesLeftEncoderPos = 0;
+    circlesLeftLastEncoded = 0;
+    circlesServoLeftRotation = 90; // startowa pozycja serwa (program 2)
+    circlesLeftLastActivityTime = 0;   // czas ostatniego ruchu enkodera (program 2)
+    // CIRCLES PROG 3
+    circlesIsServoRightRunning = false;
+    circlesRightStartTime = 0;
+    circlesRiightDirection = 1; // 1 = prawo, -1 = lewo (program 3)
+    circlesRightLastCLK = HIGH;
     #endif
 
     #ifdef MODULE_TIMER
@@ -782,7 +791,7 @@ void initBomb(){
     #ifdef MODULE_INTERVAL
     pinMode(INTERVAL_LED, OUTPUT);
     pinMode(INTERVAL_BTN, INPUT_PULLUP);
-    digitalWrite(INTERVAL_LED, HIGH);
+    digitalWrite(INTERVAL_LED, LOW);
     #endif
 
     #ifdef MODULE_WIRES
@@ -814,7 +823,8 @@ void initBomb(){
 	pinMode(CIRCLES_STEER_UP_CLK, INPUT);
 	pinMode(CIRCLES_STEER_UP_DT, INPUT);
 	circlesServoUp.attach(CIRCLES_SERVO_UP);
-	circlesServoUp.write(circlesServoUpStop);
+	//circlesServoUp.write(circlesServoUpStop);
+    circlesServoUp.writeMicroseconds(1500);
 	circlesUpLastCLK = digitalRead(CIRCLES_STEER_UP_CLK);
 	// CIRCLES PROG 2
 	pinMode(CIRCLES_STEER_LEFT_CLK, INPUT_PULLUP);
@@ -822,7 +832,8 @@ void initBomb(){
 	attachInterrupt(digitalPinToInterrupt(CIRCLES_STEER_LEFT_CLK), circlesProg2UpdateEncoder, CHANGE);
 	attachInterrupt(digitalPinToInterrupt(CIRCLES_STEER_LEFT_DT), circlesProg2UpdateEncoder, CHANGE);
 	circlesServoLeft.attach(CIRCLES_SERVO_LEFT);
-	circlesServoLeft.write(circlesServoLeftRotation);
+	//circlesServoLeft.write(circlesServoLeftRotation);
+    circlesServoLeft.writeMicroseconds(1500);
 	circlesLeftLastActivityTime = millis();
 	// CIRCLES PROG 3
 	circlesServoRight.attach(CIRCLES_SERVO_RIGHT);
@@ -873,7 +884,7 @@ void initBomb(){
     delay(1000);
     epd.Sleep();
     #endif
-    delay(4000);
+    delay(3000);
 }
 
 void setup(){
