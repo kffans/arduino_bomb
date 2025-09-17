@@ -1,9 +1,9 @@
 //#define MODULE_TIMER
 #define MODULE_INTERVAL
-//#define MODULE_LED_STRIP
-//#define MODULE_WIRES
+#define MODULE_LED_STRIP
+#define MODULE_WIRES
 #define MODULE_MELODY
-#define MODULE_LASER
+//#define MODULE_LASER
 //#define MODULE_MAZE
 //#define MODULE_CIRCLES
 #define MODULE_EPAPER
@@ -199,7 +199,7 @@ unsigned int mazeDebounceCounter = 0;
 #endif
 
 #ifdef MODULE_CIRCLES
-const unsigned int CIRCLES_TARGET_ACCURACY = 50;
+const unsigned int CIRCLES_TARGET_ACCURACY = 100;
 int circlesHold = 0;
 bool areCirclesDone = false;
 int circlesProg3DebounceCounter = 0;
@@ -208,9 +208,9 @@ Servo circlesServoUp;
 const int circlesServoUpStop = 90;     // zatrzymanie (program 1)
 const int circlesServoUpSteerRight = 100;   // ruch w prawo (program 1)
 const int circlesServoUpSteerLeft  = 80;    // ruch w lewo (program 1)
-const int circlesUpStepDegree = 2;        // krok obrotu (program 1)
+const int circlesUpStepDegree = 3;        // krok obrotu (program 1)
 const float circlesUpDegreesPerMs = 0.1f;  // ile stopni na 1 ms (program 1)
-const int circlesUpMoveTime = circlesUpStepDegree / circlesUpDegreesPerMs;  // czas ruchu dla kroku (program 1)
+const int circlesUpMoveTime = (int)(circlesUpStepDegree / circlesUpDegreesPerMs);  // czas ruchu dla kroku (program 1)
 int circlesUpLastCLK;
 // CIRCLES PROG 2
 Servo circlesServoLeft;
@@ -222,7 +222,7 @@ unsigned long circlesLeftLastActivityTime = 0;   // czas ostatniego ruchu enkode
 Servo circlesServoRight;
 bool circlesIsServoRightRunning = false;
 unsigned long circlesRightStartTime = 0;
-int circlesRiightDirection = 1; // 1 = prawo, -1 = lewo (program 3)
+int circlesRightDirection = 1; // 1 = prawo, -1 = lewo (program 3)
 int circlesRightLastCLK = HIGH;
 #endif
 
@@ -529,7 +529,7 @@ void playKeys() {
 Status checkWires(){
     byte successfulCuts = 0;
     for (byte i = 0; i < WIRES_COUNT; i++) {
-        if (digitalRead(WIRES_BASE + i) == LOW) { // jeżeli kabel jest wyjęty
+        if (digitalRead(WIRES_BASE + i) == HIGH) { // jeżeli kabel jest wyjęty
             if (wiresMask[i] == true) { successfulCuts++; }
             else                      { return Status::FAILURE; }
         }
@@ -645,9 +645,9 @@ Status checkCircles() {
 		int currentCLK_3 = digitalRead(CIRCLES_STEER_RIGHT_CLK);
 		if (currentCLK_3 != circlesRightLastCLK && currentCLK_3 == LOW) {
 			if (digitalRead(CIRCLES_STEER_RIGHT_DT) != currentCLK_3) {
-				circlesRiightDirection = 1;   // w prawo
+				circlesRightDirection = 1;   // w prawo
 			} else {
-				circlesRiightDirection = -1;  // w lewo
+				circlesRightDirection = -1;  // w lewo
 			}
 		}
 		if (circlesProg3DebounceCounter > 1) {
@@ -669,7 +669,7 @@ Status checkCircles() {
 		}
 		if (circlesIsServoRightRunning) {
 			unsigned long elapsed_3 = millis() - circlesRightStartTime;
-			if (circlesRiightDirection == 1) {
+			if (circlesRightDirection == 1) {
 				circlesServoRight.writeMicroseconds(1700); // prawo
 			} 
 			else {
@@ -687,12 +687,15 @@ Status checkCircles() {
     unsigned int circlesAccuracy = analogRead(CIRCLES_LDR);
     if (circlesAccuracy >= CIRCLES_TARGET_ACCURACY) { // @TODO skalibrować wartość CIRCLES_TARGET_ACCURACY
         circlesHold++;
-        if (circlesHold >= 63) { // 63 * 16ms > 1000ms
+        if (circlesHold >= 500) { // 63 * 16ms > 1000ms
             return Status::SUCCESS;
         }
     }
     else {
-        circlesHold = 0;
+        circlesHold--;
+		if (circlesHold < 0) {
+			circlesHold = 0;
+		}
     }
     return Status::NEUTRAL;
 }
@@ -761,7 +764,7 @@ void initBomb(){
     // CIRCLES PROG 3
     circlesIsServoRightRunning = false;
     circlesRightStartTime = 0;
-    circlesRiightDirection = 1; // 1 = prawo, -1 = lewo (program 3)
+    circlesRightDirection = 1; // 1 = prawo, -1 = lewo (program 3)
     circlesRightLastCLK = HIGH;
     #endif
 
@@ -818,13 +821,12 @@ void initBomb(){
     #endif
     
     #ifdef MODULE_CIRCLES
-	circlesProg3DebounceCounter = 0;
     // CIRCLES PROG 1
 	pinMode(CIRCLES_STEER_UP_CLK, INPUT);
 	pinMode(CIRCLES_STEER_UP_DT, INPUT);
 	circlesServoUp.attach(CIRCLES_SERVO_UP);
 	//circlesServoUp.write(circlesServoUpStop);
-    circlesServoUp.writeMicroseconds(1500);
+    circlesServoUp.writeMicroseconds(1300);
 	circlesUpLastCLK = digitalRead(CIRCLES_STEER_UP_CLK);
 	// CIRCLES PROG 2
 	pinMode(CIRCLES_STEER_LEFT_CLK, INPUT_PULLUP);
@@ -833,14 +835,14 @@ void initBomb(){
 	attachInterrupt(digitalPinToInterrupt(CIRCLES_STEER_LEFT_DT), circlesProg2UpdateEncoder, CHANGE);
 	circlesServoLeft.attach(CIRCLES_SERVO_LEFT);
 	//circlesServoLeft.write(circlesServoLeftRotation);
-    circlesServoLeft.writeMicroseconds(1500);
+    circlesServoLeft.writeMicroseconds(1400);
 	circlesLeftLastActivityTime = millis();
 	// CIRCLES PROG 3
 	circlesServoRight.attach(CIRCLES_SERVO_RIGHT);
 	pinMode(CIRCLES_STEER_RIGHT_CLK, INPUT);
 	pinMode(CIRCLES_STEER_RIGHT_DT, INPUT);
 	pinMode(CIRCLES_STEER_RIGHT_SW, INPUT_PULLUP);
-	circlesServoRight.writeMicroseconds(1500); // stop na starcie
+	circlesServoRight.writeMicroseconds(1600); // stop na starcie
 	circlesRightLastCLK = digitalRead(CIRCLES_STEER_RIGHT_CLK);
     #endif
 
@@ -865,9 +867,9 @@ void initBomb(){
     laserServo.write(laserRotation);
     #endif
     #ifdef MODULE_CIRCLES
-    circlesServoUp.write(0);
-    circlesServoLeft.write(0);
-    circlesServoRight.write(0);
+    //circlesServoUp.write(0);
+    //circlesServoLeft.write(0);
+    //circlesServoRight.write(0);
 	// @TODO obrocic o 120 stopni wszystkie
     #endif
 
@@ -884,7 +886,14 @@ void initBomb(){
     delay(1000);
     epd.Sleep();
     #endif
-    delay(3000);
+
+    #ifdef MODULE_CIRCLES
+    delay(1000);
+    circlesServoUp.writeMicroseconds(1500);
+    circlesServoLeft.writeMicroseconds(1500);
+    circlesServoRight.writeMicroseconds(1500);
+    #endif
+    delay(2000);
 }
 
 void setup(){
@@ -1033,6 +1042,9 @@ void loop() {
 				switch (circlesStatus) {
 					case Status::SUCCESS:
 						areCirclesDone = true;
+						circlesServoUp.writeMicroseconds(1500);
+						circlesServoLeft.writeMicroseconds(1500);
+						circlesServoRight.writeMicroseconds(1500);
 						break;
 					default:
 						break;
